@@ -59,6 +59,9 @@ async function init() {
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN signal_code TEXT`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN response_code TEXT`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN patient_info TEXT`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN incident_level INTEGER DEFAULT 1`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN is_major INTEGER DEFAULT 0`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN message_count INTEGER DEFAULT 0`); } catch (e) {}
   
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_case_number ON cases(case_number)`);
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_service ON cases(service)`);
@@ -420,6 +423,15 @@ function addCaseMessage(caseId, messageData) {
     messageData.timestamp,
     messageData.source || null
   ]);
+  
+  // Update message count and check for Level 2 escalation
+  const messageCount = getOne(cadDb.exec(`SELECT COUNT(*) as count FROM case_messages WHERE case_id = ?`, [caseId]));
+  const count = messageCount ? messageCount.count : 1;
+  
+  // Auto-escalate to Level 2 if 6+ messages
+  const newLevel = count >= 6 ? 2 : 1;
+  cadDb.run(`UPDATE cases SET message_count = ?, incident_level = MAX(incident_level, ?) WHERE id = ?`, [count, newLevel, caseId]);
+  
   saveDb();
   return { changes: 1 };
 }
@@ -468,6 +480,31 @@ function closeCase(caseNumber) {
   cadDb.run('UPDATE cases SET status = ? WHERE case_number = ?', ['closed', caseNumber]);
   saveDb();
   return { changes: 1 };
+}
+
+// Mark/unmark case as major incident
+function setMajorIncident(caseNumber, isMajor) {
+  cadDb.run('UPDATE cases SET is_major = ? WHERE case_number = ?', [isMajor ? 1 : 0, caseNumber]);
+  saveDb();
+  return { changes: 1 };
+}
+
+// Get major incidents (never timeout)
+function getMajorIncidents() {
+  return resultToObjects(cadDb.exec(`
+    SELECT * FROM cases 
+    WHERE is_major = 1 AND status = 'active'
+    ORDER BY last_updated DESC
+  `));
+}
+
+// Get Level 2+ incidents
+function getEscalatedIncidents() {
+  return resultToObjects(cadDb.exec(`
+    SELECT * FROM cases 
+    WHERE incident_level >= 2 AND status = 'active'
+    ORDER BY last_updated DESC
+  `));
 }
 
 // Get cases with geocoding for map
@@ -573,12 +610,25 @@ function getMessagesByDateRange(startTime, endTime, service = null) {
 }
 
 // Close old cases (1 hour timeout unless activity)
+// Major incidents and Level 2+ incidents have longer timeout (4 hours)
 function closeOldCases(timeoutSeconds = 3600) {
   const cutoffTime = Math.floor(Date.now() / 1000) - timeoutSeconds;
+  const majorCutoffTime = Math.floor(Date.now() / 1000) - (timeoutSeconds * 4); // 4x longer for major/level2
+  
+  // Close regular cases after normal timeout
   cadDb.run(`
     UPDATE cases SET status = 'closed' 
-    WHERE status = 'active' AND last_updated < ?
+    WHERE status = 'active' AND last_updated < ? AND is_major = 0 AND incident_level < 2
   `, [cutoffTime]);
+  
+  // Close Level 2 incidents after extended timeout (but not major incidents)
+  cadDb.run(`
+    UPDATE cases SET status = 'closed' 
+    WHERE status = 'active' AND last_updated < ? AND is_major = 0 AND incident_level >= 2
+  `, [majorCutoffTime]);
+  
+  // Major incidents are NEVER auto-closed - must be manually disabled
+  
   saveDb();
 }
 
@@ -596,6 +646,9 @@ module.exports = {
   upsertResource,
   getCaseResources,
   closeCase,
+  setMajorIncident,
+  getMajorIncidents,
+  getEscalatedIncidents,
   getGeocodedCases,
   addUnknownMessage,
   getUnknownMessages,

@@ -18,11 +18,18 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>
           <i class="fas fa-clipboard-list"></i> Case Details
+          ${locals.case.is_major ? '<span class="badge bg-danger ms-2"><i class="fas fa-star"></i> MAJOR</span>' : ''}
+          ${locals.case.incident_level >= 2 ? '<span class="badge bg-warning text-dark ms-2">Level ' + locals.case.incident_level + '</span>' : ''}
         </span>
-        <span class="service-badge service-${locals.case.service}">
-          <i class="fas fa-${locals.case.serviceConfig.icon || 'question'}"></i>
-          ${locals.case.serviceConfig.name || locals.case.service}
-        </span>
+        <div>
+          <button class="btn btn-sm ${locals.case.is_major ? 'btn-warning' : 'btn-outline-danger'} me-2" onclick="toggleMajor('${locals.case.case_number}', ${!locals.case.is_major})">
+            <i class="fas fa-star"></i> ${locals.case.is_major ? 'Unmark Major' : 'Mark Major'}
+          </button>
+          <span class="service-badge service-${locals.case.service}">
+            <i class="fas fa-${locals.case.serviceConfig.icon || 'question'}"></i>
+            ${locals.case.serviceConfig.name || locals.case.service}
+          </span>
+        </div>
       </div>
       <div class="card-body">
         <div class="row">
@@ -163,5 +170,21 @@
       location.reload();
     }
   });
+  
+  // Toggle major incident status
+  function toggleMajor(caseNumber, isMajor) {
+    fetch('/cad/api/case/' + caseNumber + '/major', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ major: isMajor })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      }
+    })
+    .catch(err => console.error('Error:', err));
+  }
 </script>
 ` }) %>

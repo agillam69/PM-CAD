@@ -94,12 +94,16 @@
       <div class="row">
         ${data.cases.map(c => `
           <div class="col-lg-4 col-md-6 mb-3">
-            <div class="card case-card" onclick="window.location='/cad/case/${c.case_number}'">
+            <div class="card case-card ${c.is_major ? 'border-danger' : c.incident_level >= 2 ? 'border-warning' : ''}" style="${c.is_major || c.incident_level >= 2 ? 'border-width: 2px;' : ''}" onclick="window.location='/cad/case/${c.case_number}'">
               <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="case-number text-white">${c.case_number}</span>
-                <span class="service-badge service-${key}">
-                  <i class="fas fa-${data.config.icon}"></i>
-                </span>
+                <div>
+                  ${c.is_major ? '<span class="badge bg-danger me-1"><i class="fas fa-star"></i></span>' : ''}
+                  ${c.incident_level >= 2 ? '<span class="badge bg-warning text-dark me-1">L' + c.incident_level + '</span>' : ''}
+                  <span class="service-badge service-${key}">
+                    <i class="fas fa-${data.config.icon}"></i>
+                  </span>
+                </div>
               </div>
               <div class="card-body">
                 ${c.incident_description ? `

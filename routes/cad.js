@@ -168,6 +168,48 @@ router.get('/api/map-cases', (req, res) => {
   res.json(cases);
 });
 
+// API: Mark/unmark case as major incident
+router.post('/api/case/:caseNumber/major', (req, res) => {
+  const caseNumber = req.params.caseNumber;
+  const isMajor = req.body.major === true || req.body.major === 'true';
+  
+  db.setMajorIncident(caseNumber, isMajor);
+  
+  res.json({ success: true, caseNumber, isMajor });
+});
+
+// API: Close/disable a major incident
+router.post('/api/case/:caseNumber/close', (req, res) => {
+  const caseNumber = req.params.caseNumber;
+  
+  db.closeCase(caseNumber);
+  
+  res.json({ success: true, caseNumber, status: 'closed' });
+});
+
+// Major incidents view
+router.get('/major', (req, res) => {
+  const services = nconf.get('services') || {};
+  const majorCases = db.getMajorIncidents();
+  const escalatedCases = db.getEscalatedIncidents();
+  
+  // Combine and dedupe (major incidents may also be escalated)
+  const allCases = [...majorCases];
+  for (const c of escalatedCases) {
+    if (!allCases.find(m => m.case_number === c.case_number)) {
+      allCases.push(c);
+    }
+  }
+  
+  res.render('cad/major', {
+    pageTitle: 'Major Incidents - CAD',
+    services,
+    majorCases,
+    escalatedCases: allCases,
+    moment
+  });
+});
+
 // API: Sync from PagerMon
 router.post('/api/sync', async (req, res) => {
   try {
