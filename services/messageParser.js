@@ -557,6 +557,7 @@ function extractAddressWithGPS(message, patterns) {
   const gpsPatterns = [
     /(-?\d{1,3}\.\d{4,})\s*[,\/]\s*(-?\d{1,3}\.\d{4,})/,  // -37.8136, 144.9631
     /LAT[:\s]*(-?\d{1,3}\.\d+)\s*(?:LON|LNG|LONG)[:\s]*(-?\d{1,3}\.\d+)/i,
+    /LAT\/LON[:\s]*(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/i,  // LAT/LON: -39.094445, 146.123456
     /GPS[:\s]*(-?\d{1,3}\.\d+)\s*[,\/]\s*(-?\d{1,3}\.\d+)/i
   ];
   
@@ -578,6 +579,25 @@ function extractAddressWithGPS(message, patterns) {
   
   // Fall back to regular address extraction
   const address = extractAddress(message, patterns);
+  
+  // For remote locations, try to append region/state for better geocoding
+  if (address) {
+    // Check if this looks like a remote/trail location that needs context
+    const remoteKeywords = ['WALKING TRK', 'TRACK', 'TRAIL', 'CAMPSITE', 'NATIONAL PARK', 'STATE FOREST', 'RESERVE'];
+    const isRemoteLocation = remoteKeywords.some(kw => address.toUpperCase().includes(kw));
+    
+    if (isRemoteLocation) {
+      // Try to extract a landmark or park name for better geocoding
+      // e.g., "WILSONS PROMONTORY" from the address
+      return {
+        address,
+        isGPS: false,
+        gpsCoordinates: null,
+        isRemoteLocation: true
+      };
+    }
+  }
+  
   return {
     address,
     isGPS: false,

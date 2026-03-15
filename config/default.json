@@ -20,11 +20,15 @@
     }
   },
   "geocoding": {
-    "provider": "nominatim",
+    "provider": "vicmaps",
     "nominatim": {
       "url": "https://nominatim.openstreetmap.org/search",
       "defaultState": "VIC",
       "defaultCountry": "Australia"
+    },
+    "vicmaps": {
+      "url": "https://services.land.vic.gov.au/SpatialDatamart/rest/services/Geocoding/VicMapAddress/GeocodeServer/findAddressCandidates",
+      "enabled": true
     },
     "google": {
       "apiKey": ""

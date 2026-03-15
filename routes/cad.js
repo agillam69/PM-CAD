@@ -9,8 +9,39 @@ const db = require('../db');
 router.get('/', (req, res) => {
   const services = nconf.get('services') || {};
   const serviceFilter = req.query.service || null;
+  const timeRange = req.query.range || 'active';
+  const customStart = req.query.start || null;
+  const customEnd = req.query.end || null;
   
-  const cases = caseManager.getActiveCasesByService(serviceFilter);
+  let cases;
+  let startDate = '';
+  let endDate = '';
+  
+  if (timeRange === 'active') {
+    // Default: active cases only
+    cases = caseManager.getActiveCasesByService(serviceFilter);
+  } else if (timeRange === 'custom' && customStart && customEnd) {
+    // Custom date range
+    const start = new Date(customStart);
+    const end = new Date(customEnd);
+    cases = caseManager.getCasesByDateRange(start, end, serviceFilter);
+    startDate = customStart;
+    endDate = customEnd;
+  } else {
+    // Quick range (1h, 4h, 12h, 24h, 48h, 7d)
+    const rangeMap = {
+      '1h': 1,
+      '4h': 4,
+      '12h': 12,
+      '24h': 24,
+      '48h': 48,
+      '7d': 168
+    };
+    const hours = rangeMap[timeRange] || 4;
+    const start = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const end = new Date();
+    cases = caseManager.getCasesByDateRange(start, end, serviceFilter);
+  }
   
   // Group cases by service
   const casesByService = {};
@@ -36,6 +67,9 @@ router.get('/', (req, res) => {
     casesByService,
     serviceFilter,
     totalCases: cases.length,
+    timeRange,
+    startDate,
+    endDate,
     moment
   });
 });

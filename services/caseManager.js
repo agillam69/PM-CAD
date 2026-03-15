@@ -53,12 +53,15 @@ async function processMessage(messageData) {
     caseData.latitude = parsed.gpsCoordinates.lat;
     caseData.longitude = parsed.gpsCoordinates.lng;
   } else if (parsed.address && !parsed.isGPSLocation) {
-    // Try to geocode regular addresses
+    // Try to geocode regular addresses, with SVVB map reference fallback
     try {
-      const geoResult = await geocoder.geocode(parsed.address);
+      const geoResult = await geocoder.geocodeWithMapRef(parsed.address, parsed.mapRef);
       if (geoResult) {
         caseData.latitude = geoResult.lat;
         caseData.longitude = geoResult.lng;
+        if (geoResult.source) {
+          logger.debug('Geocoded via ' + geoResult.source, { address: parsed.address, mapRef: parsed.mapRef });
+        }
       }
     } catch (error) {
       logger.error('Geocoding failed', { address: parsed.address, error: error.message });

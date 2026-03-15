@@ -73,6 +73,13 @@ async function executeGeocode(address, cacheKey, provider) {
       case 'google':
         result = await geocodeGoogle(address);
         break;
+      case 'vicmaps':
+        result = await geocodeVicMaps(address);
+        // Fall back to Nominatim if VicMaps fails
+        if (!result) {
+          result = await geocodeNominatim(address);
+        }
+        break;
       case 'nominatim':
       default:
         result = await geocodeNominatim(address);
@@ -112,33 +119,167 @@ async function geocodeNominatim(address) {
     fullAddress += `, ${defaultCountry}`;
   }
   
+  // Try the full address first
+  let result = await tryNominatimSearch(baseUrl, fullAddress);
+  if (result) return result;
+  
+  // For remote locations, try extracting landmark/park names
+  const remoteKeywords = ['WALKING TRK', 'TRACK', 'TRAIL', 'CAMPSITE', 'NATIONAL PARK', 'STATE FOREST', 'RESERVE', 'PROMONTORY'];
+  const isRemote = remoteKeywords.some(kw => address.toUpperCase().includes(kw));
+  
+  if (isRemote) {
+    // Try to extract the main landmark (e.g., "WILSONS PROMONTORY" from the address)
+    const landmarkPatterns = [
+      /(?:WILSONS?\s*PROMONTORY|GRAMPIANS|ALPINE|DANDENONG|YARRA\s*RANGES|GREAT\s*OCEAN|OTWAY)/i,
+      /([A-Z][A-Z\s]+(?:NATIONAL\s*PARK|STATE\s*FOREST|RESERVE|PROMONTORY))/i,
+      /(?:@|:)([A-Z][A-Z\s]+)/  // Text after @ or : often contains location name
+    ];
+    
+    for (const pattern of landmarkPatterns) {
+      const match = address.match(pattern);
+      if (match) {
+        const landmark = (match[1] || match[0]).trim();
+        const searchTerm = `${landmark}, ${defaultState || 'Victoria'}, ${defaultCountry}`;
+        result = await tryNominatimSearch(baseUrl, searchTerm);
+        if (result) return result;
+      }
+    }
+    
+    // Try just the last significant words (often the park/area name)
+    const words = address.split(/\s+/).filter(w => w.length > 2);
+    if (words.length >= 2) {
+      // Try last 2-3 words as they often contain the location name
+      const lastWords = words.slice(-3).join(' ');
+      const searchTerm = `${lastWords}, ${defaultState || 'Victoria'}, ${defaultCountry}`;
+      result = await tryNominatimSearch(baseUrl, searchTerm);
+      if (result) return result;
+    }
+  }
+  
+  return null;
+}
+
+async function tryNominatimSearch(baseUrl, query) {
   const params = {
-    q: fullAddress,
+    q: query,
     format: 'json',
     limit: 1,
     addressdetails: 1
   };
   
-  // Nominatim requires a User-Agent
-  const response = await axios.get(baseUrl, {
-    params,
-    headers: {
-      'User-Agent': 'PagerMon-CAD-Addon/1.0'
-    },
-    timeout: 10000
-  });
-  
-  if (response.data && response.data.length > 0) {
-    const result = response.data[0];
-    return {
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
-      displayName: result.display_name,
-      confidence: parseFloat(result.importance) || 0.5
-    };
+  try {
+    const response = await axios.get(baseUrl, {
+      params,
+      headers: {
+        'User-Agent': 'PagerMon-CAD-Addon/1.0'
+      },
+      timeout: 10000
+    });
+    
+    if (response.data && response.data.length > 0) {
+      const result = response.data[0];
+      return {
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon),
+        displayName: result.display_name,
+        confidence: parseFloat(result.importance) || 0.5
+      };
+    }
+  } catch (e) {
+    // Silently fail, will try next search strategy
   }
   
   return null;
+}
+
+// VicMaps ArcGIS Geocoder - Best for Victorian addresses
+async function geocodeVicMaps(address) {
+  const config = nconf.get('geocoding:vicmaps') || {};
+  const baseUrl = config.url || 'https://services.land.vic.gov.au/SpatialDatamart/rest/services/Geocoding/VicMapAddress/GeocodeServer/findAddressCandidates';
+  
+  // Clean up address for VicMaps
+  let searchAddress = address
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Add Victoria if not present
+  if (!searchAddress.toLowerCase().includes('vic') && !searchAddress.toLowerCase().includes('victoria')) {
+    searchAddress += ', VIC';
+  }
+  
+  const params = {
+    SingleLine: searchAddress,
+    f: 'json',
+    outFields: '*',
+    maxLocations: 1
+  };
+  
+  try {
+    const response = await axios.get(baseUrl, {
+      params,
+      timeout: 10000
+    });
+    
+    if (response.data && response.data.candidates && response.data.candidates.length > 0) {
+      const result = response.data.candidates[0];
+      // VicMaps returns coordinates in GDA94 (EPSG:4283) which is close to WGS84
+      return {
+        lat: result.location.y,
+        lng: result.location.x,
+        displayName: result.address,
+        confidence: result.score / 100,
+        source: 'vicmaps'
+      };
+    }
+  } catch (e) {
+    console.error('VicMaps geocoding error:', e.message);
+  }
+  
+  return null;
+}
+
+// Convert SVVB map reference to coordinates
+// Format: SE 572 F13 (Region, Page, Grid)
+async function geocodeSVVB(mapRef) {
+  // SVVB map grid lookup - approximate center points for each map page
+  // This is a simplified lookup - full implementation would need the actual grid data
+  const svvbRegions = {
+    'NW': { latBase: -36.5, lngBase: 141.0 },
+    'NE': { latBase: -36.5, lngBase: 145.0 },
+    'SW': { latBase: -38.5, lngBase: 141.0 },
+    'SE': { latBase: -38.5, lngBase: 145.0 },
+    'N': { latBase: -36.0, lngBase: 143.0 },
+    'S': { latBase: -38.0, lngBase: 143.0 },
+    'E': { latBase: -37.0, lngBase: 146.0 },
+    'W': { latBase: -37.0, lngBase: 142.0 },
+    'M': { latBase: -37.8, lngBase: 145.0 }  // Melbourne metro
+  };
+  
+  // Parse map reference: SE 572 F13
+  const match = mapRef.match(/([NSEW]{1,2}|M)\s*(\d+)\s*([A-Z])(\d+)/i);
+  if (!match) return null;
+  
+  const region = match[1].toUpperCase();
+  const page = parseInt(match[2]);
+  const gridCol = match[3].toUpperCase();
+  const gridRow = parseInt(match[4]);
+  
+  const regionData = svvbRegions[region];
+  if (!regionData) return null;
+  
+  // Approximate calculation (each page covers roughly 0.1 degrees)
+  // This is a rough estimate - actual SVVB grid is more complex
+  const pageOffset = (page % 100) * 0.01;
+  const colOffset = (gridCol.charCodeAt(0) - 65) * 0.005; // A=0, B=1, etc.
+  const rowOffset = gridRow * 0.002;
+  
+  return {
+    lat: regionData.latBase - pageOffset - rowOffset,
+    lng: regionData.lngBase + pageOffset + colOffset,
+    displayName: `SVVB ${mapRef}`,
+    confidence: 0.3, // Low confidence - approximate
+    source: 'svvb-grid'
+  };
 }
 
 async function geocodeGoogle(address) {
@@ -225,8 +366,24 @@ function clearCache() {
   geocodeCache.clear();
 }
 
+// Geocode with SVVB map reference fallback
+async function geocodeWithMapRef(address, mapRef) {
+  // Try address first
+  let result = await geocode(address);
+  
+  // If address geocoding failed and we have a map reference, try SVVB
+  if (!result && mapRef) {
+    result = await geocodeSVVB(mapRef);
+  }
+  
+  return result;
+}
+
 module.exports = {
   geocode,
   geocodeBatch,
+  geocodeWithMapRef,
+  geocodeSVVB,
+  geocodeVicMaps,
   clearCache
 };

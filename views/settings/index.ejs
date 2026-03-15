@@ -428,25 +428,25 @@
               </tr>
             </thead>
             <tbody id="servicesTable">
-              ${Object.entries(services).map(([key, config]) => `
-                <tr>
-                  <td><code>${key}</code></td>
-                  <td>${config.name}</td>
-                  <td>
-                    <span class="badge" style="background-color: ${config.color};">${config.color}</span>
-                  </td>
-                  <td><i class="fas fa-${config.icon}"></i> ${config.icon}</td>
-                  <td><small>${(config.agencyMatch || []).join(', ')}</small></td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-warning" onclick="editService('${key}')">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteService('${key}')">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              `).join('')}
+              ${Object.entries(services).map(([key, config]) => 
+                '<tr>' +
+                  '<td><code>' + key + '</code></td>' +
+                  '<td>' + config.name + '</td>' +
+                  '<td>' +
+                    '<span class="badge" style="background-color: ' + config.color + ';">' + config.color + '</span>' +
+                  '</td>' +
+                  '<td><i class="fas fa-' + config.icon + '"></i> ' + config.icon + '</td>' +
+                  '<td><small>' + (config.agencyMatch || []).join(', ') + '</small></td>' +
+                  '<td>' +
+                    '<button class="btn btn-sm btn-outline-warning" onclick="editService(' + "'" + key + "'" + ')">' +
+                      '<i class="fas fa-edit"></i>' +
+                    '</button>' +
+                    '<button class="btn btn-sm btn-outline-danger" onclick="deleteService(' + "'" + key + "'" + ')">' +
+                      '<i class="fas fa-trash"></i>' +
+                    '</button>' +
+                  '</td>' +
+                '</tr>'
+              ).join('')}
             </tbody>
           </table>
         </div>
@@ -807,17 +807,17 @@
       return;
     }
     
-    tbody.innerHTML = patterns.map((pattern, index) => `
-      <tr>
-        <td><code>${escapeHtml(pattern)}</code></td>
-        <td>${escapeHtml(reasons[pattern] || 'No reason specified')}</td>
-        <td>
-          <button class="btn btn-sm btn-outline-danger" onclick="deleteFilter(${index})">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = patterns.map((pattern, index) => 
+      '<tr>' +
+        '<td><code>' + escapeHtml(pattern) + '</code></td>' +
+        '<td>' + escapeHtml(reasons[pattern] || 'No reason specified') + '</td>' +
+        '<td>' +
+          '<button class="btn btn-sm btn-outline-danger" onclick="deleteFilter(' + index + ')">' +
+            '<i class="fas fa-trash"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>'
+    ).join('');
   }
   
   function escapeHtml(text) {
@@ -893,17 +893,17 @@
       return;
     }
     
-    tbody.innerHTML = patterns.map((pattern, index) => `
-      <tr>
-        <td><code>${escapeHtml(pattern)}</code></td>
-        <td>${escapeHtml(reasons[pattern] || 'Priority')}</td>
-        <td>
-          <button class="btn btn-sm btn-outline-danger" onclick="deletePriority(${index})">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = patterns.map((pattern, index) => 
+      '<tr>' +
+        '<td><code>' + escapeHtml(pattern) + '</code></td>' +
+        '<td>' + escapeHtml(reasons[pattern] || 'Priority') + '</td>' +
+        '<td>' +
+          '<button class="btn btn-sm btn-outline-danger" onclick="deletePriority(' + index + ')">' +
+            '<i class="fas fa-trash"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>'
+    ).join('');
   }
   
   function showAddPriority() {

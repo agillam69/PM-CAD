@@ -1,20 +1,67 @@
 <%- include('../layout', { body: `
 
-<div class="row mb-4">
+<div class="row mb-3">
   <div class="col-12">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
       <h2><i class="fas fa-th-list"></i> Dispatch Board</h2>
       <div>
         <a href="/cad" class="btn btn-outline-light filter-btn ${!serviceFilter ? 'active' : ''}">
           All (${totalCases})
         </a>
-        ${Object.entries(services).map(([key, config]) => `
-          <a href="/cad?service=${key}" 
-             class="btn filter-btn ${serviceFilter === key ? 'active' : ''}"
-             style="background-color: ${config.color}; color: white;">
-            <i class="fas fa-${config.icon}"></i> ${config.name}
-          </a>
-        `).join('')}
+        <a href="/cad/priority" class="btn btn-warning filter-btn">
+          <i class="fas fa-exclamation-triangle"></i> Priority
+        </a>
+        ${Object.entries(services).map(([key, config]) => 
+          '<a href="/cad?service=' + key + '" ' +
+             'class="btn filter-btn ' + (serviceFilter === key ? 'active' : '') + '" ' +
+             'style="background-color: ' + config.color + '; color: white;">' +
+            '<i class="fas fa-' + config.icon + '"></i> ' + config.name +
+          '</a>'
+        ).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Date/Time Filter -->
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="card bg-dark">
+      <div class="card-body py-2">
+        <form id="dateFilterForm" class="row g-2 align-items-center">
+          <div class="col-auto">
+            <label class="text-light"><i class="fas fa-clock"></i> Time Range:</label>
+          </div>
+          <div class="col-auto">
+            <select class="form-select form-select-sm bg-dark text-light" id="quickRange" onchange="applyQuickRange()">
+              <option value="active" ${timeRange === 'active' ? 'selected' : ''}>Active Cases</option>
+              <option value="1h" ${timeRange === '1h' ? 'selected' : ''}>Last 1 Hour</option>
+              <option value="4h" ${timeRange === '4h' ? 'selected' : ''}>Last 4 Hours</option>
+              <option value="12h" ${timeRange === '12h' ? 'selected' : ''}>Last 12 Hours</option>
+              <option value="24h" ${timeRange === '24h' ? 'selected' : ''}>Last 24 Hours</option>
+              <option value="48h" ${timeRange === '48h' ? 'selected' : ''}>Last 48 Hours</option>
+              <option value="7d" ${timeRange === '7d' ? 'selected' : ''}>Last 7 Days</option>
+              <option value="custom" ${timeRange === 'custom' ? 'selected' : ''}>Custom Range</option>
+            </select>
+          </div>
+          <div class="col-auto custom-range-inputs" style="display: ${timeRange === 'custom' ? 'flex' : 'none'};">
+            <input type="datetime-local" class="form-control form-control-sm bg-dark text-light" id="startDate" value="${startDate || ''}">
+          </div>
+          <div class="col-auto custom-range-inputs" style="display: ${timeRange === 'custom' ? 'flex' : 'none'};">
+            <span class="text-light">to</span>
+          </div>
+          <div class="col-auto custom-range-inputs" style="display: ${timeRange === 'custom' ? 'flex' : 'none'};">
+            <input type="datetime-local" class="form-control form-control-sm bg-dark text-light" id="endDate" value="${endDate || ''}">
+          </div>
+          <div class="col-auto custom-range-inputs" style="display: ${timeRange === 'custom' ? 'flex' : 'none'};">
+            <button type="button" class="btn btn-sm btn-primary" onclick="applyCustomRange()">
+              <i class="fas fa-search"></i> Apply
+            </button>
+          </div>
+          <div class="col-auto ms-auto">
+            <span class="text-muted small">Showing ${totalCases} cases</span>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -103,15 +150,54 @@
     }
   });
   
-  // Auto-refresh every 30 seconds
-  setInterval(function() {
-    location.reload();
-  }, 30000);
+  // Auto-refresh every 30 seconds (only for active cases view)
+  const currentRange = '${timeRange || 'active'}';
+  if (currentRange === 'active') {
+    setInterval(function() {
+      location.reload();
+    }, 30000);
+  }
   
   // Join service room if filtering
   const serviceFilter = '${serviceFilter || ''}';
   if (serviceFilter) {
     socket.emit('join', serviceFilter);
+  }
+  
+  // Date/Time filter functions
+  function applyQuickRange() {
+    const range = document.getElementById('quickRange').value;
+    const customInputs = document.querySelectorAll('.custom-range-inputs');
+    
+    if (range === 'custom') {
+      customInputs.forEach(el => el.style.display = 'flex');
+      return;
+    }
+    
+    customInputs.forEach(el => el.style.display = 'none');
+    
+    // Build URL with current service filter if any
+    let url = '/cad?range=' + range;
+    if (serviceFilter) {
+      url += '&service=' + serviceFilter;
+    }
+    window.location.href = url;
+  }
+  
+  function applyCustomRange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+      alert('Please select both start and end dates');
+      return;
+    }
+    
+    let url = '/cad?range=custom&start=' + encodeURIComponent(startDate) + '&end=' + encodeURIComponent(endDate);
+    if (serviceFilter) {
+      url += '&service=' + serviceFilter;
+    }
+    window.location.href = url;
   }
 </script>
 ` }) %>
