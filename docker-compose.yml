@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  cad-addon:
+    build: .
+    container_name: pagermon-cad
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # Mount PagerMon's database (read-only)
+      - /path/to/pagermon/server/messages.db:/app/pagermon.db:ro
+      # Mount config directory
+      - ./config:/app/config
+      # Persist CAD database
+      - ./data:/app/data
+    restart: unless-stopped
+    # If running alongside PagerMon docker-compose, use this network
+    # networks:
+    #   - pagermon_default

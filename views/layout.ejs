@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %> - PagerMon CAD</title>
+  
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    :root {
+      --ambulance-color: #28a745;
+      --fire-color: #dc3545;
+      --ses-color: #fd7e14;
+      --nept-color: #6f42c1;
+    }
+    
+    body {
+      background-color: #1a1a2e;
+      color: #fff;
+      min-height: 100vh;
+    }
+    
+    .navbar {
+      background-color: #16213e !important;
+      border-bottom: 2px solid #0f3460;
+    }
+    
+    .navbar-brand {
+      font-weight: bold;
+      color: #e94560 !important;
+    }
+    
+    .nav-link {
+      color: #ddd !important;
+    }
+    
+    .nav-link:hover, .nav-link.active {
+      color: #fff !important;
+    }
+    
+    .card {
+      background-color: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+    }
+    
+    .card-header {
+      background-color: #0f3460;
+      border-bottom: 1px solid #0f3460;
+      font-weight: bold;
+      color: #fff;
+    }
+    
+    .case-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    
+    .case-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    
+    .service-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    
+    .service-ambulance { background-color: var(--ambulance-color); }
+    .service-fire { background-color: var(--fire-color); }
+    .service-ses { background-color: var(--ses-color); }
+    .service-nept { background-color: var(--nept-color); }
+    .service-unknown { background-color: #6c757d; }
+    
+    .case-number {
+      font-family: 'Courier New', monospace;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #fff;
+    }
+    
+    .resource-badge {
+      background-color: #0f3460;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      margin: 2px;
+      display: inline-block;
+    }
+    
+    .message-timeline {
+      border-left: 2px solid #0f3460;
+      padding-left: 20px;
+      margin-left: 10px;
+    }
+    
+    .message-item {
+      position: relative;
+      padding: 10px 0;
+    }
+    
+    .message-item::before {
+      content: '';
+      position: absolute;
+      left: -26px;
+      top: 15px;
+      width: 10px;
+      height: 10px;
+      background-color: #e94560;
+      border-radius: 50%;
+    }
+    
+    .timestamp {
+      color: #ddd;
+      font-size: 0.85rem;
+    }
+    
+    .resource-badge {
+      color: #fff !important;
+      font-weight: bold;
+    }
+    
+    #map {
+      height: 600px;
+      border-radius: 8px;
+    }
+    
+    .filter-btn {
+      margin: 2px;
+    }
+    
+    .filter-btn.active {
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+    }
+    
+    .stats-card {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .stats-number {
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
+    
+    /* Ensure all text is visible */
+    .text-muted {
+      color: #aaa !important;
+    }
+    
+    .form-label {
+      color: #ddd;
+    }
+    
+    .breadcrumb-item a {
+      color: #6ea8fe;
+    }
+    
+    .breadcrumb-item.active {
+      color: #ddd;
+    }
+    
+    .table {
+      color: #fff;
+    }
+    
+    .list-group-item {
+      color: #fff;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      color: #fff;
+    }
+    
+    p {
+      color: #ddd;
+    }
+    
+    code {
+      color: #f8d568;
+    }
+    
+    .card-body {
+      color: #fff;
+    }
+    
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .new-case {
+      animation: highlight 3s ease-out;
+    }
+    
+    @keyframes highlight {
+      0% { background-color: rgba(233, 69, 96, 0.5); }
+      100% { background-color: transparent; }
+    }
+  </style>
+  
+  <%- typeof extraHead !== 'undefined' ? extraHead : '' %>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">
+        <i class="fas fa-broadcast-tower"></i> PagerMon CAD
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/cad"><i class="fas fa-th-list"></i> Dispatch Board</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/cad/history"><i class="fas fa-history"></i> History</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/map"><i class="fas fa-map-marked-alt"></i> Live Map</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/settings"><i class="fas fa-cog"></i> Settings</a>
+          </li>
+        </ul>
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <span class="nav-link" id="connection-status">
+              <i class="fas fa-circle text-warning pulse"></i> Connecting...
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  
+  <main class="container-fluid py-4">
+    <%- body %>
+  </main>
+  
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Moment.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  
+  <script>
+    // Socket.IO connection
+    const socket = io();
+    
+    socket.on('connect', () => {
+      document.getElementById('connection-status').innerHTML = 
+        '<i class="fas fa-circle text-success"></i> Connected';
+    });
+    
+    socket.on('disconnect', () => {
+      document.getElementById('connection-status').innerHTML = 
+        '<i class="fas fa-circle text-danger"></i> Disconnected';
+    });
+    
+    // Format timestamp helper
+    function formatTime(timestamp) {
+      return moment.unix(timestamp).format('HH:mm:ss');
+    }
+    
+    function formatDateTime(timestamp) {
+      return moment.unix(timestamp).format('DD/MM/YYYY HH:mm:ss');
+    }
+    
+    function timeAgo(timestamp) {
+      return moment.unix(timestamp).fromNow();
+    }
+  </script>
+  
+  <%- typeof extraScripts !== 'undefined' ? extraScripts : '' %>
+</body>
+</html>

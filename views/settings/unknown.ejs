@@ -1,0 +1,65 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center">
+      <h2><i class="fas fa-question-circle"></i> Unknown Messages</h2>
+      <a href="/settings" class="btn btn-outline-light">
+        <i class="fas fa-arrow-left"></i> Back to Settings
+      </a>
+    </div>
+    <p class="text-muted">Messages from unknown or unspecified aliases are stored here for review.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-list"></i> Recent Unknown Messages
+        <span class="badge bg-secondary">${messages.length}</span>
+      </div>
+      <div class="card-body p-0">
+        ${messages.length === 0 ? `
+          <div class="text-center py-5 text-muted">
+            <i class="fas fa-check-circle fa-3x mb-3"></i>
+            <p>No unknown messages</p>
+          </div>
+        ` : `
+          <div class="table-responsive">
+            <table class="table table-dark table-striped mb-0">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Alias</th>
+                  <th>Message</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${messages.map(msg => `
+                  <tr>
+                    <td class="text-nowrap">
+                      <small>${new Date(msg.timestamp * 1000).toLocaleString()}</small>
+                    </td>
+                    <td>
+                      <code class="text-warning">${msg.alias || 'null'}</code>
+                    </td>
+                    <td>
+                      <small class="text-light">${msg.message.substring(0, 200)}${msg.message.length > 200 ? '...' : ''}</small>
+                    </td>
+                    <td>
+                      <small class="text-muted">${msg.source || '-'}</small>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+    </div>
+  </div>
+</div>
+
+`, extraScripts: `` }) %>

@@ -1,0 +1,72 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center">
+      <h2>
+        <i class="fas fa-exclamation-triangle text-warning"></i>
+        Priority Cases
+      </h2>
+      <a href="/cad" class="btn btn-outline-light">
+        <i class="fas fa-arrow-left"></i> All Services
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row" id="cases-container">
+  ${cases.length > 0 ? cases.map(c => `
+    <div class="col-lg-4 col-md-6 mb-3">
+      <div class="card case-card" onclick="window.location='/cad/case/${c.case_number}'" 
+           style="border-left: 4px solid ${c.serviceConfig.color || '#ffc107'}; border-top: 2px solid #ffc107;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="case-number text-white">${c.case_number}</span>
+          <div>
+            <span class="badge bg-warning text-dark me-1">
+              <i class="fas fa-exclamation-triangle"></i> ${c.priority_reason || 'Priority'}
+            </span>
+            <span class="badge" style="background-color: ${c.serviceConfig.color || '#6c757d'}">
+              ${c.serviceConfig.name || c.service}
+            </span>
+          </div>
+        </div>
+        <div class="card-body">
+          ${c.address ? `
+            <p class="mb-2 text-white">
+              <i class="fas fa-map-marker-alt text-danger"></i> ${c.address}
+            </p>
+          ` : ''}
+          ${c.map_ref ? `
+            <p class="mb-2 text-light">
+              <i class="fas fa-map"></i> Map: ${c.map_ref}
+            </p>
+          ` : ''}
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="badge" style="background-color: ${c.serviceConfig.color || '#6c757d'}">
+              ${c.resourceCount} units
+            </span>
+            <span class="timestamp text-light">${moment.unix(c.last_updated).fromNow()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('') : `
+    <div class="col-12 text-center py-5">
+      <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+      <h4 class="text-muted">No priority cases</h4>
+      <p class="text-muted">Cases matching priority patterns (SIG1, MICA, etc.) will appear here</p>
+    </div>
+  `}
+</div>
+
+`, extraScripts: `
+<script>
+  socket.emit('join', 'priority');
+  
+  socket.on('caseUpdate', function(data) {
+    if (data.case && data.case.is_priority) {
+      location.reload();
+    }
+  });
+</script>
+` }) %>

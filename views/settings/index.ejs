@@ -1,0 +1,1032 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-4">
+  <div class="col-12">
+    <h2><i class="fas fa-cog"></i> Settings</h2>
+  </div>
+</div>
+
+<!-- Connection Info -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <i class="fas fa-plug"></i> Connection Information
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h5>Server Details</h5>
+            <table class="table table-dark table-sm">
+              <tr>
+                <td><strong>Port:</strong></td>
+                <td><code class="text-warning">${port}</code></td>
+              </tr>
+              <tr>
+                <td><strong>Server URL:</strong></td>
+                <td><code class="text-warning">${serverUrl}</code></td>
+              </tr>
+              <tr>
+                <td><strong>Mode:</strong></td>
+                <td><span class="badge ${mode === 'standalone' ? 'bg-success' : 'bg-info'}">${mode.toUpperCase()}</span></td>
+              </tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h5>PagerMon Message Repeat Configuration</h5>
+            <p class="text-light small">Configure these settings in PagerMon's Message Repeat plugin:</p>
+            <table class="table table-dark table-sm">
+              <tr>
+                <td><strong>repeatURI:</strong></td>
+                <td>
+                  <code class="text-success" id="ingestEndpoint">${ingestEndpoint}</code>
+                  <button class="btn btn-sm btn-outline-light ms-2" onclick="copyToClipboard('ingestEndpoint')">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>repeatAPIKEY:</strong></td>
+                <td>
+                  <code class="text-success" id="apiKeyDisplay">${apiKey}</code>
+                  <button class="btn btn-sm btn-outline-light ms-2" onclick="copyToClipboard('apiKeyDisplay')">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API Key Settings -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-key"></i> API Key
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label text-light">Current API Key</label>
+          <div class="input-group">
+            <input type="text" class="form-control bg-dark text-light" id="apiKeyInput" value="${apiKey}">
+            <button class="btn btn-warning" onclick="setApiKey()">
+              <i class="fas fa-save"></i> Save
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-success" onclick="generateApiKey()">
+          <i class="fas fa-sync"></i> Generate New Key
+        </button>
+        <div id="apiKeyStatus" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Mode Settings -->
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-toggle-on"></i> Operating Mode
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="mode" id="modeStandalone" 
+                   value="standalone" ${mode === 'standalone' ? 'checked' : ''} onchange="setMode('standalone')">
+            <label class="form-check-label text-light" for="modeStandalone">
+              <strong>Standalone</strong> - Receive messages via API (Message Repeat)
+            </label>
+          </div>
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="radio" name="mode" id="modeConnected" 
+                   value="connected" ${mode === 'connected' ? 'checked' : ''} onchange="setMode('connected')">
+            <label class="form-check-label text-light" for="modeConnected">
+              <strong>Connected</strong> - Direct connection to PagerMon database
+            </label>
+          </div>
+        </div>
+        <div id="modeStatus" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Timeout Settings -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-clock"></i> Timeout Settings
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <label class="form-label text-light">Case Timeout</label>
+            <p class="text-muted small mb-2">Cases auto-close after inactivity. New messages extend timeout.</p>
+            <div class="input-group">
+              <input type="number" class="form-control bg-dark text-light" id="caseTimeout" 
+                     value="${caseTimeout || 3600}" min="300" step="300">
+              <span class="input-group-text bg-dark text-light">sec</span>
+              <button class="btn btn-warning" onclick="setCaseTimeout()">
+                <i class="fas fa-save"></i>
+              </button>
+            </div>
+            <div class="mt-1">
+              <small class="text-muted">
+                <a href="#" onclick="document.getElementById('caseTimeout').value=1800;return false;">30m</a> |
+                <a href="#" onclick="document.getElementById('caseTimeout').value=3600;return false;">1h</a> |
+                <a href="#" onclick="document.getElementById('caseTimeout').value=7200;return false;">2h</a> |
+                <a href="#" onclick="document.getElementById('caseTimeout').value=14400;return false;">4h</a>
+              </small>
+            </div>
+            <div id="timeoutStatus" class="mt-2"></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-light">Page Refresh Interval</label>
+            <p class="text-muted small mb-2">How often the dispatch board auto-refreshes.</p>
+            <div class="input-group">
+              <input type="number" class="form-control bg-dark text-light" id="refreshInterval" 
+                     value="${refreshInterval || 30}" min="10" step="5">
+              <span class="input-group-text bg-dark text-light">sec</span>
+              <button class="btn btn-warning" onclick="setRefreshInterval()">
+                <i class="fas fa-save"></i>
+              </button>
+            </div>
+            <div class="mt-1">
+              <small class="text-muted">
+                <a href="#" onclick="document.getElementById('refreshInterval').value=15;return false;">15s</a> |
+                <a href="#" onclick="document.getElementById('refreshInterval').value=30;return false;">30s</a> |
+                <a href="#" onclick="document.getElementById('refreshInterval').value=60;return false;">1m</a> |
+                <a href="#" onclick="document.getElementById('refreshInterval').value=120;return false;">2m</a>
+              </small>
+            </div>
+            <div id="refreshStatus" class="mt-2"></div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label text-light">Alias Association Timeout</label>
+            <p class="text-muted small mb-2">How long to associate multi-part messages with an alias.</p>
+            <div class="input-group">
+              <input type="number" class="form-control bg-dark text-light" id="aliasTimeout" 
+                     value="${aliasTimeout || 3600}" min="300" step="300">
+              <span class="input-group-text bg-dark text-light">sec</span>
+              <button class="btn btn-warning" onclick="setAliasTimeout()">
+                <i class="fas fa-save"></i>
+              </button>
+            </div>
+            <div class="mt-1">
+              <small class="text-muted">
+                <a href="#" onclick="document.getElementById('aliasTimeout').value=1800;return false;">30m</a> |
+                <a href="#" onclick="document.getElementById('aliasTimeout').value=3600;return false;">1h</a> |
+                <a href="#" onclick="document.getElementById('aliasTimeout').value=7200;return false;">2h</a>
+              </small>
+            </div>
+            <div id="aliasStatus" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Other Settings -->
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-question-circle"></i> Unknown Messages
+      </div>
+      <div class="card-body">
+        <p class="text-light small">Messages from unknown/unspecified aliases are stored separately.</p>
+        <button class="btn btn-outline-info" onclick="viewUnknownMessages()">
+          <i class="fas fa-eye"></i> View Unknown Messages
+        </button>
+        <div id="unknownCount" class="mt-2 text-muted"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-map-marker-alt"></i> Geocoding Settings
+      </div>
+      <div class="card-body">
+        <p class="text-light small">Geocoding API timeout for address lookups.</p>
+        <div class="input-group">
+          <input type="number" class="form-control bg-dark text-light" id="geocodingTimeout" 
+                 value="${geocodingTimeout || 10000}" min="5000" step="1000">
+          <span class="input-group-text bg-dark text-light">ms</span>
+          <button class="btn btn-warning" onclick="setGeocodingTimeout()">
+            <i class="fas fa-save"></i>
+          </button>
+        </div>
+        <div id="geocodingStatus" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data Sync (Connected Mode) -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-database"></i> Data Sync (Historical Import)
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <label class="form-label text-light">Database Path</label>
+            <div class="input-group">
+              <input type="text" class="form-control bg-dark text-light" id="dbPath" 
+                     value="${pagermonDbFile}" placeholder="../../messages.db">
+              <button class="btn btn-warning" onclick="setDatabase()">
+                <i class="fas fa-save"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-light">Start Date</label>
+            <input type="datetime-local" class="form-control bg-dark text-light" id="syncStartDate">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-light">End Date</label>
+            <input type="datetime-local" class="form-control bg-dark text-light" id="syncEndDate">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100" onclick="syncHistory()">
+              <i class="fas fa-download"></i> Import
+            </button>
+          </div>
+        </div>
+        <div id="syncStatus" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alias Import -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-file-csv"></i> Import Aliases from CSV
+      </div>
+      <div class="card-body">
+        <p class="text-light small">Import aliases and agencies from a PagerMon export CSV file. The CSV must have "alias" and "agency" columns.</p>
+        <div class="row">
+          <div class="col-md-8">
+            <div class="input-group">
+              <input type="file" class="form-control bg-dark text-light" id="csvFile" accept=".csv">
+              <button class="btn btn-primary" onclick="importAliases()">
+                <i class="fas fa-upload"></i> Import
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-outline-info w-100" onclick="showAgencySummary()">
+              <i class="fas fa-list"></i> View Current Agencies
+            </button>
+          </div>
+        </div>
+        <div id="importStatus" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Message Filters -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-filter"></i> Message Filters (Exclude)</span>
+        <button class="btn btn-sm btn-success" onclick="showAddFilter()">
+          <i class="fas fa-plus"></i> Add Filter
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="text-light small">Filter out messages that match these regex patterns. Filtered messages will not create cases.</p>
+        <div class="table-responsive">
+          <table class="table table-dark">
+            <thead>
+              <tr>
+                <th>Pattern (Regex)</th>
+                <th>Reason</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="filtersTable">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        <div id="filterStatus" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Priority Patterns -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-warning">
+      <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
+        <span><i class="fas fa-exclamation-triangle"></i> Priority Patterns</span>
+        <button class="btn btn-sm btn-dark" onclick="showAddPriority()">
+          <i class="fas fa-plus"></i> Add Priority Pattern
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="text-light small">Messages matching these patterns will be flagged as priority. View priority cases at <a href="/cad/priority" class="text-warning">/cad/priority</a></p>
+        <div class="table-responsive">
+          <table class="table table-dark">
+            <thead>
+              <tr>
+                <th>Pattern (Regex)</th>
+                <th>Reason</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="priorityTable">
+              <!-- Populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        <div id="priorityStatus" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Logs -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-file-alt"></i> System Logs</span>
+        <button class="btn btn-sm btn-outline-light" onclick="loadLogs()">
+          <i class="fas fa-sync"></i> Refresh
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <label class="form-label text-light">Log File</label>
+            <select class="form-select bg-dark text-light" id="logFileSelect" onchange="viewLog()">
+              <option value="">Select a log file...</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-light">Lines</label>
+            <select class="form-select bg-dark text-light" id="logLinesSelect" onchange="viewLog()">
+              <option value="100">100</option>
+              <option value="250">250</option>
+              <option value="500" selected>500</option>
+              <option value="1000">1000</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-primary w-100" onclick="downloadLog()">
+              <i class="fas fa-download"></i> Download
+            </button>
+          </div>
+        </div>
+        <div id="logContent" class="bg-black text-success p-3 rounded" style="max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap;">
+          Select a log file to view...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Services/Agencies -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-building"></i> Services / Agencies</span>
+        <button class="btn btn-sm btn-success" onclick="showAddService()">
+          <i class="fas fa-plus"></i> Add Service
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-dark">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Name</th>
+                <th>Color</th>
+                <th>Icon</th>
+                <th>Agency Match Patterns</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="servicesTable">
+              ${Object.entries(services).map(([key, config]) => `
+                <tr>
+                  <td><code>${key}</code></td>
+                  <td>${config.name}</td>
+                  <td>
+                    <span class="badge" style="background-color: ${config.color};">${config.color}</span>
+                  </td>
+                  <td><i class="fas fa-${config.icon}"></i> ${config.icon}</td>
+                  <td><small>${(config.agencyMatch || []).join(', ')}</small></td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-warning" onclick="editService('${key}')">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteService('${key}')">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Service Modal -->
+<div class="modal fade" id="serviceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark">
+      <div class="modal-header">
+        <h5 class="modal-title text-light" id="serviceModalTitle">Add Service</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editingServiceKey">
+        <div class="mb-3">
+          <label class="form-label text-light">Service Key</label>
+          <input type="text" class="form-control bg-dark text-light" id="serviceKey" placeholder="e.g., ambulance">
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-light">Display Name</label>
+          <input type="text" class="form-control bg-dark text-light" id="serviceName" placeholder="e.g., Ambulance">
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-light">Color (hex)</label>
+          <input type="color" class="form-control form-control-color bg-dark" id="serviceColor" value="#28a745">
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-light">Icon (Font Awesome)</label>
+          <input type="text" class="form-control bg-dark text-light" id="serviceIcon" placeholder="e.g., ambulance, fire, hard-hat">
+        </div>
+        <div class="mb-3">
+          <label class="form-label text-light">Agency Match Patterns (comma-separated)</label>
+          <textarea class="form-control bg-dark text-light" id="serviceAgencyMatch" rows="2" 
+                    placeholder="e.g., Ambulance Vic, Ambulance VIC, AV"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveService()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+`, extraScripts: `
+<script>
+  const servicesData = ${JSON.stringify(services)};
+  
+  function copyToClipboard(elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard!');
+  }
+  
+  function generateApiKey() {
+    fetch('/settings/api/generate-key', { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('apiKeyInput').value = data.apiKey;
+          document.getElementById('apiKeyDisplay').textContent = data.apiKey;
+          document.getElementById('apiKeyStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> New key generated!</span>';
+        }
+      });
+  }
+  
+  function setApiKey() {
+    const apiKey = document.getElementById('apiKeyInput').value;
+    fetch('/settings/api/set-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('apiKeyDisplay').textContent = apiKey;
+        document.getElementById('apiKeyStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> API key saved!</span>';
+      } else {
+        document.getElementById('apiKeyStatus').innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+      }
+    });
+  }
+  
+  function setMode(mode) {
+    fetch('/settings/api/set-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode })
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('modeStatus').innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</span>';
+    });
+  }
+  
+  function setDatabase() {
+    const dbPath = document.getElementById('dbPath').value;
+    fetch('/settings/api/set-database', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dbPath })
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('syncStatus').innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> ' + data.message + '</span>';
+    });
+  }
+  
+  function syncHistory() {
+    const startDate = document.getElementById('syncStartDate').value;
+    const endDate = document.getElementById('syncEndDate').value;
+    
+    if (!startDate || !endDate) {
+      document.getElementById('syncStatus').innerHTML = '<span class="text-danger">Please select start and end dates</span>';
+      return;
+    }
+    
+    document.getElementById('syncStatus').innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Syncing...</span>';
+    
+    fetch('/settings/api/sync-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate, endDate })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('syncStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Synced ' + data.synced + ' cases from ' + data.total + ' messages</span>';
+      } else {
+        document.getElementById('syncStatus').innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+      }
+    });
+  }
+  
+  function setCaseTimeout() {
+    const timeout = document.getElementById('caseTimeout').value;
+    fetch('/settings/api/set-timeout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'caseTimeout', value: parseInt(timeout) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('timeoutStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Saved!</span>';
+      } else {
+        document.getElementById('timeoutStatus').innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+      }
+    });
+  }
+  
+  function setRefreshInterval() {
+    const value = document.getElementById('refreshInterval').value;
+    fetch('/settings/api/set-timeout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'refreshInterval', value: parseInt(value) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('refreshStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Saved!</span>';
+      } else {
+        document.getElementById('refreshStatus').innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+      }
+    });
+  }
+  
+  function setAliasTimeout() {
+    const value = document.getElementById('aliasTimeout').value;
+    fetch('/settings/api/set-timeout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'aliasTimeout', value: parseInt(value) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('aliasStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Saved!</span>';
+      } else {
+        document.getElementById('aliasStatus').innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+      }
+    });
+  }
+  
+  function setGeocodingTimeout() {
+    const value = document.getElementById('geocodingTimeout').value;
+    fetch('/settings/api/set-timeout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'geocodingTimeout', value: parseInt(value) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('geocodingStatus').innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Saved!</span>';
+      } else {
+        document.getElementById('geocodingStatus').innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+      }
+    });
+  }
+  
+  function viewUnknownMessages() {
+    window.location.href = '/settings/unknown-messages';
+  }
+  
+  function showAddService() {
+    document.getElementById('serviceModalTitle').textContent = 'Add Service';
+    document.getElementById('editingServiceKey').value = '';
+    document.getElementById('serviceKey').value = '';
+    document.getElementById('serviceKey').disabled = false;
+    document.getElementById('serviceName').value = '';
+    document.getElementById('serviceColor').value = '#28a745';
+    document.getElementById('serviceIcon').value = '';
+    document.getElementById('serviceAgencyMatch').value = '';
+    new bootstrap.Modal(document.getElementById('serviceModal')).show();
+  }
+  
+  function editService(key) {
+    const service = servicesData[key];
+    document.getElementById('serviceModalTitle').textContent = 'Edit Service';
+    document.getElementById('editingServiceKey').value = key;
+    document.getElementById('serviceKey').value = key;
+    document.getElementById('serviceKey').disabled = true;
+    document.getElementById('serviceName').value = service.name;
+    document.getElementById('serviceColor').value = service.color;
+    document.getElementById('serviceIcon').value = service.icon;
+    document.getElementById('serviceAgencyMatch').value = (service.agencyMatch || []).join(', ');
+    new bootstrap.Modal(document.getElementById('serviceModal')).show();
+  }
+  
+  function saveService() {
+    const editingKey = document.getElementById('editingServiceKey').value;
+    const serviceKey = editingKey || document.getElementById('serviceKey').value;
+    
+    fetch('/settings/api/set-service', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        serviceKey,
+        name: document.getElementById('serviceName').value,
+        color: document.getElementById('serviceColor').value,
+        icon: document.getElementById('serviceIcon').value,
+        agencyMatch: document.getElementById('serviceAgencyMatch').value
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      }
+    });
+  }
+  
+  function deleteService(key) {
+    if (!confirm('Delete service "' + key + '"?')) return;
+    
+    fetch('/settings/api/delete-service', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serviceKey: key })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      }
+    });
+  }
+  
+  function importAliases() {
+    const fileInput = document.getElementById('csvFile');
+    const statusEl = document.getElementById('importStatus');
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+      statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> Please select a CSV file</span>';
+      return;
+    }
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      const csvData = e.target.result;
+      
+      statusEl.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Processing...</span>';
+      
+      fetch('/settings/api/import-aliases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csvData })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          let html = '<div class="alert alert-success">';
+          html += '<strong><i class="fas fa-check"></i> Import Complete</strong><br>';
+          html += 'Processed ' + data.imported + ' aliases from ' + data.agencies + ' agencies.<br>';
+          html += '<small class="text-muted">Agencies found: ' + data.agencyList.join(', ') + '</small>';
+          html += '</div>';
+          statusEl.innerHTML = html;
+        } else {
+          statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + data.error + '</span>';
+        }
+      })
+      .catch(err => {
+        statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + err.message + '</span>';
+      });
+    };
+    
+    reader.readAsText(file);
+  }
+  
+  function showAgencySummary() {
+    fetch('/settings/api/aliases')
+      .then(res => res.json())
+      .then(data => {
+        let html = '<div class="mt-3"><h6 class="text-light">Current Agency Configuration:</h6>';
+        html += '<div class="table-responsive"><table class="table table-dark table-sm">';
+        html += '<thead><tr><th>Service</th><th>Agencies</th></tr></thead><tbody>';
+        
+        for (const [key, info] of Object.entries(data)) {
+          html += '<tr>';
+          html += '<td><span class="badge" style="background-color: ' + info.color + ';">' + info.name + '</span></td>';
+          html += '<td><small>' + info.agencies.join(', ') + '</small></td>';
+          html += '</tr>';
+        }
+        
+        html += '</tbody></table></div></div>';
+        document.getElementById('importStatus').innerHTML = html;
+      });
+  }
+  
+  // Message Filters
+  let filtersData = {};
+  
+  function loadFilters() {
+    fetch('/settings/api/get-filters')
+      .then(res => res.json())
+      .then(data => {
+        filtersData = data;
+        renderFiltersTable();
+      });
+  }
+  
+  function renderFiltersTable() {
+    const tbody = document.getElementById('filtersTable');
+    const patterns = filtersData.excludePatterns || [];
+    const reasons = filtersData.excludeReasons || {};
+    
+    if (patterns.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">No filters configured</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = patterns.map((pattern, index) => `
+      <tr>
+        <td><code>${escapeHtml(pattern)}</code></td>
+        <td>${escapeHtml(reasons[pattern] || 'No reason specified')}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteFilter(${index})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  function showAddFilter() {
+    const pattern = prompt('Enter regex pattern to filter (e.g., ^@@\\\\)&\\\\)E51TIMEUPDATE):');
+    if (!pattern) return;
+    
+    const reason = prompt('Enter reason for filtering (e.g., EAS Time Update):') || 'Filtered';
+    
+    addFilter(pattern, reason);
+  }
+  
+  function addFilter(pattern, reason) {
+    const statusEl = document.getElementById('filterStatus');
+    statusEl.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Adding filter...</span>';
+    
+    fetch('/settings/api/add-filter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pattern, reason })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        statusEl.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Filter added</span>';
+        loadFilters();
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+      } else {
+        statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + (data.error || 'Failed to add filter') + '</span>';
+      }
+    });
+  }
+  
+  function deleteFilter(index) {
+    if (!confirm('Delete this filter?')) return;
+    
+    const statusEl = document.getElementById('filterStatus');
+    statusEl.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Deleting...</span>';
+    
+    fetch('/settings/api/delete-filter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        statusEl.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Filter deleted</span>';
+        loadFilters();
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+      } else {
+        statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> Failed to delete</span>';
+      }
+    });
+  }
+  
+  // Load filters on page load
+  document.addEventListener('DOMContentLoaded', loadFilters);
+  
+  // Priority Patterns
+  function renderPriorityTable() {
+    const tbody = document.getElementById('priorityTable');
+    const patterns = filtersData.priorityPatterns || [];
+    const reasons = filtersData.priorityReasons || {};
+    
+    if (patterns.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">No priority patterns configured</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = patterns.map((pattern, index) => `
+      <tr>
+        <td><code>${escapeHtml(pattern)}</code></td>
+        <td>${escapeHtml(reasons[pattern] || 'Priority')}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-danger" onclick="deletePriority(${index})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  
+  function showAddPriority() {
+    const pattern = prompt('Enter regex pattern for priority (e.g., SIG1, MICA, CODE\\\\s*1):');
+    if (!pattern) return;
+    
+    const reason = prompt('Enter reason (e.g., Signal 1 - Lights & Sirens):') || 'Priority';
+    
+    addPriority(pattern, reason);
+  }
+  
+  function addPriority(pattern, reason) {
+    const statusEl = document.getElementById('priorityStatus');
+    statusEl.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Adding...</span>';
+    
+    fetch('/settings/api/add-priority', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pattern, reason })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        statusEl.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Priority pattern added</span>';
+        loadFilters();
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+      } else {
+        statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + (data.error || 'Failed') + '</span>';
+      }
+    });
+  }
+  
+  function deletePriority(index) {
+    if (!confirm('Delete this priority pattern?')) return;
+    
+    const statusEl = document.getElementById('priorityStatus');
+    statusEl.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin"></i> Deleting...</span>';
+    
+    fetch('/settings/api/delete-priority', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        statusEl.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Deleted</span>';
+        loadFilters();
+        setTimeout(() => { statusEl.innerHTML = ''; }, 2000);
+      } else {
+        statusEl.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> Failed</span>';
+      }
+    });
+  }
+  
+  // Update loadFilters to also render priority table
+  const originalLoadFilters = loadFilters;
+  loadFilters = function() {
+    fetch('/settings/api/get-filters')
+      .then(res => res.json())
+      .then(data => {
+        filtersData = data;
+        renderFiltersTable();
+        renderPriorityTable();
+      });
+  };
+  
+  // Logs
+  function loadLogs() {
+    fetch('/settings/api/logs')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('logFileSelect');
+        select.innerHTML = '<option value="">Select a log file...</option>';
+        
+        if (data.files && data.files.length > 0) {
+          data.files.forEach(file => {
+            const option = document.createElement('option');
+            option.value = file.name;
+            option.textContent = file.name + ' (' + file.sizeFormatted + ')';
+            select.appendChild(option);
+          });
+        }
+      });
+  }
+  
+  function viewLog() {
+    const filename = document.getElementById('logFileSelect').value;
+    const lines = document.getElementById('logLinesSelect').value;
+    const contentEl = document.getElementById('logContent');
+    
+    if (!filename) {
+      contentEl.textContent = 'Select a log file to view...';
+      return;
+    }
+    
+    contentEl.textContent = 'Loading...';
+    
+    fetch('/settings/api/logs/' + encodeURIComponent(filename) + '?lines=' + lines)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          contentEl.textContent = data.content || '(empty)';
+          contentEl.scrollTop = contentEl.scrollHeight;
+        } else {
+          contentEl.textContent = 'Error: ' + (data.error || 'Failed to load log');
+        }
+      })
+      .catch(err => {
+        contentEl.textContent = 'Error: ' + err.message;
+      });
+  }
+  
+  function downloadLog() {
+    const filename = document.getElementById('logFileSelect').value;
+    if (!filename) {
+      alert('Please select a log file first');
+      return;
+    }
+    window.location.href = '/settings/api/logs/' + encodeURIComponent(filename) + '/download';
+  }
+  
+  // Load logs on page load
+  document.addEventListener('DOMContentLoaded', loadLogs);
+</script>
+` }) %>

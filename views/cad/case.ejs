@@ -1,0 +1,167 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-4">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/cad">Dispatch Board</a></li>
+        <li class="breadcrumb-item active">${locals.case.case_number}</li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Case Info -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+          <i class="fas fa-clipboard-list"></i> Case Details
+        </span>
+        <span class="service-badge service-${locals.case.service}">
+          <i class="fas fa-${locals.case.serviceConfig.icon || 'question'}"></i>
+          ${locals.case.serviceConfig.name || locals.case.service}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h3 class="case-number mb-3 text-white">${locals.case.case_number}</h3>
+            
+            ${locals.case.address ? `
+              <p class="mb-2 text-light">
+                <strong class="text-white"><i class="fas fa-map-marker-alt text-danger"></i> Address:</strong><br>
+                ${locals.case.address}
+              </p>
+            ` : ''}
+            
+            ${locals.case.map_ref ? `
+              <p class="mb-2 text-light">
+                <strong class="text-white"><i class="fas fa-map"></i> Map Reference:</strong><br>
+                ${locals.case.map_ref}
+              </p>
+            ` : ''}
+            
+            <p class="mb-2 text-light">
+              <strong class="text-white"><i class="fas fa-clock"></i> First Seen:</strong><br>
+              <span class="timestamp text-light">${moment.unix(locals.case.first_seen).format('DD/MM/YYYY HH:mm:ss')}</span>
+            </p>
+            
+            <p class="mb-2 text-light">
+              <strong class="text-white"><i class="fas fa-sync"></i> Last Updated:</strong><br>
+              <span class="timestamp text-light">${moment.unix(locals.case.last_updated).format('DD/MM/YYYY HH:mm:ss')}</span>
+              <small class="text-light">(${moment.unix(locals.case.last_updated).fromNow()})</small>
+            </p>
+          </div>
+          
+          <div class="col-md-6">
+            <!-- Mini Map -->
+            ${locals.case.latitude && locals.case.longitude ? `
+              <div id="case-map" style="height: 250px; border-radius: 8px;"></div>
+            ` : `
+              <div class="text-center py-5 bg-dark rounded">
+                <i class="fas fa-map-marked-alt fa-3x text-muted mb-2"></i>
+                <p class="text-muted">Location not available</p>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Message Timeline -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-history"></i> Message Timeline
+        <span class="badge bg-secondary">${locals.case.messages.length}</span>
+      </div>
+      <div class="card-body">
+        <div class="message-timeline">
+          ${locals.case.messages.map(msg => `
+            <div class="message-item">
+              <div class="d-flex justify-content-between">
+                <span class="timestamp text-light">
+                  ${moment.unix(msg.timestamp).format('HH:mm:ss')}
+                </span>
+                ${msg.source ? `<span class="badge bg-secondary">${msg.source}</span>` : ''}
+              </div>
+              <p class="mb-0 mt-1 text-white" style="font-family: monospace; word-break: break-word;">
+                ${msg.message}
+              </p>
+            </div>
+          `).join('')}
+          
+          ${locals.case.messages.length === 0 ? `
+            <p class="text-muted">No messages recorded</p>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Resources Sidebar -->
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-truck"></i> Assigned Resources
+        <span class="badge bg-secondary">${locals.case.resources.length}</span>
+      </div>
+      <div class="card-body">
+        ${locals.case.resources.length > 0 ? `
+          <div class="list-group list-group-flush">
+            ${locals.case.resources.map(r => `
+              <div class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
+                <span class="resource-badge text-white">${r.resource_code}</span>
+                <small class="text-light">
+                  ${moment.unix(r.first_seen).format('HH:mm')}
+                </small>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <p class="text-muted text-center py-3">No resources assigned</p>
+        `}
+      </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-bolt"></i> Actions
+      </div>
+      <div class="card-body">
+        <a href="/map?case=${locals.case.case_number}" class="btn btn-outline-primary w-100 mb-2">
+          <i class="fas fa-map-marked-alt"></i> View on Map
+        </a>
+        <a href="/cad" class="btn btn-outline-secondary w-100">
+          <i class="fas fa-arrow-left"></i> Back to Board
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+`, extraScripts: `
+<script>
+  ${locals.case.latitude && locals.case.longitude ? `
+    // Initialize mini map
+    const map = L.map('case-map').setView([${locals.case.latitude}, ${locals.case.longitude}], 15);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Add marker
+    const marker = L.marker([${locals.case.latitude}, ${locals.case.longitude}]).addTo(map);
+    marker.bindPopup('<strong>${locals.case.case_number}</strong><br>${locals.case.address || ""}').openPopup();
+  ` : ''}
+  
+  // Listen for updates to this case
+  socket.on('caseUpdate', function(data) {
+    if (data.case && data.case.case_number === '${locals.case.case_number}') {
+      location.reload();
+    }
+  });
+</script>
+` }) %>

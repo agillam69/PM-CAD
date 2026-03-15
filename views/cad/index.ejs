@@ -1,0 +1,117 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center">
+      <h2><i class="fas fa-th-list"></i> Dispatch Board</h2>
+      <div>
+        <a href="/cad" class="btn btn-outline-light filter-btn ${!serviceFilter ? 'active' : ''}">
+          All (${totalCases})
+        </a>
+        ${Object.entries(services).map(([key, config]) => `
+          <a href="/cad?service=${key}" 
+             class="btn filter-btn ${serviceFilter === key ? 'active' : ''}"
+             style="background-color: ${config.color}; color: white;">
+            <i class="fas fa-${config.icon}"></i> ${config.name}
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row mb-4">
+  ${Object.entries(casesByService).map(([key, data]) => `
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card stats-card" style="border-left: 4px solid ${data.config.color};">
+        <div class="stats-number" style="color: ${data.config.color};">
+          ${data.cases.length}
+        </div>
+        <div class="text-light">
+          <i class="fas fa-${data.config.icon}"></i> ${data.config.name}
+        </div>
+      </div>
+    </div>
+  `).join('')}
+</div>
+
+<!-- Cases Grid -->
+<div class="row" id="cases-container">
+  ${Object.entries(casesByService).filter(([key, data]) => data.cases.length > 0).map(([key, data]) => `
+    <div class="col-12 mb-4 service-section" data-service="${key}">
+      <h4 style="color: ${data.config.color};">
+        <i class="fas fa-${data.config.icon}"></i> ${data.config.name}
+        <span class="badge bg-secondary">${data.cases.length}</span>
+      </h4>
+      <div class="row">
+        ${data.cases.map(c => `
+          <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card case-card" onclick="window.location='/cad/case/${c.case_number}'">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="case-number text-white">${c.case_number}</span>
+                <span class="service-badge service-${key}">
+                  <i class="fas fa-${data.config.icon}"></i>
+                </span>
+              </div>
+              <div class="card-body">
+                ${c.address ? `
+                  <p class="mb-2 text-white">
+                    <i class="fas fa-map-marker-alt text-danger"></i> ${c.address}
+                  </p>
+                ` : ''}
+                ${c.map_ref ? `
+                  <p class="mb-2 text-light">
+                    <i class="fas fa-map"></i> Map: ${c.map_ref}
+                  </p>
+                ` : ''}
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-light">
+                    <i class="fas fa-truck"></i> ${c.resourceCount} units
+                  </span>
+                  <span class="timestamp text-light">
+                    ${moment.unix(c.last_updated).fromNow()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')}
+  
+  ${totalCases === 0 ? `
+    <div class="col-12 text-center py-5">
+      <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+      <h4 class="text-muted">No active cases</h4>
+      <p class="text-muted">Cases will appear here when messages are received</p>
+    </div>
+  ` : ''}
+</div>
+
+`, extraScripts: `
+<script>
+  // Listen for real-time case updates
+  socket.on('caseUpdate', function(data) {
+    console.log('Case update received:', data);
+    
+    if (data.type === 'update' && data.case) {
+      // Reload the page to show updated data
+      // In production, you'd update the DOM directly
+      location.reload();
+    }
+  });
+  
+  // Auto-refresh every 30 seconds
+  setInterval(function() {
+    location.reload();
+  }, 30000);
+  
+  // Join service room if filtering
+  const serviceFilter = '${serviceFilter || ''}';
+  if (serviceFilter) {
+    socket.emit('join', serviceFilter);
+  }
+</script>
+` }) %>

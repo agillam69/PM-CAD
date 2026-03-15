@@ -1,0 +1,126 @@
+{
+  "server": {
+    "port": 3001,
+    "sessionSecret": "change-this-to-a-random-string"
+  },
+  "mode": "connected",
+  "caseTimeout": 3600,
+  "refreshInterval": 30,
+  "geocodingTimeout": 10000,
+  "aliasTimeout": 3600,
+  "ingest": {
+    "apiKey": "changeme",
+    "enabled": true
+  },
+  "pagermon": {
+    "url": "http://localhost:3000",
+    "database": {
+      "type": "sqlite3",
+      "file": "../../messages.db"
+    }
+  },
+  "geocoding": {
+    "provider": "nominatim",
+    "nominatim": {
+      "url": "https://nominatim.openstreetmap.org/search",
+      "defaultState": "VIC",
+      "defaultCountry": "Australia"
+    },
+    "google": {
+      "apiKey": ""
+    }
+  },
+  "services": {
+    "ambulance": {
+      "name": "Ambulance",
+      "color": "#04F900",
+      "icon": "ambulance",
+      "agencyMatch": ["Ambulance Vic", "Ambulance VIC", "Ambulacne Vic", "AV", "Amb Vic", "AVCG Coast Guard", "St John"]
+    },
+    "fire": {
+      "name": "Fire",
+      "color": "#FF0000",
+      "icon": "fire",
+      "agencyMatch": ["CFA", "FRV", "CFA GMT", "CFA Group", "CFA District", "CFA BMT", "CFA Alert", "CFA Captains", "CFA Coast Guard", "FRV Medical", "FRV Commander", "FRV ACFO", "FRV ACFO (CFA)", "FRV Commander (CFA)", "FRV DC", "FRV SO", "FRV SSO", "GMT", "Group Officers", "Forestry"]
+    },
+    "ses": {
+      "name": "SES",
+      "color": "#fd7e14",
+      "icon": "hard-hat",
+      "agencyMatch": ["SES", "SES Region", "SES State", "SES Officers", "SES Members", "Search & Rescue", "Rescue"]
+    },
+    "nept": {
+      "name": "NEPT",
+      "color": "#6f42c1",
+      "icon": "hospital",
+      "agencyMatch": ["AV NEPT", "NEPT", "Non-Emerg"]
+    },
+    "aircraft": {
+      "name": "Aircraft",
+      "color": "#17a2b8",
+      "icon": "helicopter",
+      "agencyMatch": ["Aircraft", "HEMS"]
+    },
+    "other": {
+      "name": "Other",
+      "color": "#6c757d",
+      "icon": "question-circle",
+      "agencyMatch": ["EAS", "EMV", "RothNet", "Comms Centre", "DMT", "System", "SERVER", "Ventia", "VPL", "Weather", "Other", "Unknown", "RFS"]
+    }
+  },
+  "messageFilters": {
+    "excludePatterns": [
+      "^@@\\)&\\)E51TIMEUPDATE",
+      "\\)E51ASNP"
+    ],
+    "excludeReasons": {
+      "^@@\\)&\\)E51TIMEUPDATE": "EAS Time Update",
+      "\\)E51ASNP": "EAS Time Sync Data"
+    },
+    "priorityPatterns": [
+      "SIG1",
+      "CODE\\s*1",
+      "MICA",
+      "HEMS",
+      "RESCUE"
+    ],
+    "priorityReasons": {
+      "SIG1": "Signal 1 - Lights & Sirens",
+      "CODE\\s*1": "Code 1 Response",
+      "MICA": "MICA Unit",
+      "HEMS": "Helicopter EMS",
+      "RESCUE": "Rescue Response"
+    }
+  },
+  "parsing": {
+    "caseNumberPatterns": [
+      "@@?E(\\d{11})",
+      "@@?N(\\d{9})",
+      "@@?J(\\d{11})",
+      "@@?S(\\d{9})",
+      "HbE(\\d{9,11})",
+      "HbN(\\d{9})",
+      "HbJ(\\d{11})",
+      "HbS(\\d{9})",
+      "(?:^|\\s)E(\\d{11})",
+      "(?:^|\\s)N(\\d{9})",
+      "(?:^|\\s)J(\\d{11})",
+      "(?:^|\\s)S(\\d{9})",
+      "\\bF(\\d{9})\\b"
+    ],
+    "addressPatterns": [
+      "LOC\\s+(.+?)(?=\\s+M\\s+\\d)",
+      "PU:(.+?)(?=\\s+PURef|\\s+DO:|$)",
+      "DO:(.+?)(?=\\s+DORef|$)"
+    ],
+    "resourcePatterns": [
+      "([A-Z]{2,4}\\d{4})",
+      "SIG\\d\\s+([A-Z]{4}\\d{4})"
+    ],
+    "mapRefPatterns": [
+      "\\sM\\s+(\\d+\\s*[A-Z]\\d+)",
+      "Ref:\\s*(\\d+\\s*[A-Z]\\d+)",
+      "\\b([A-Z]\\d{1,2})\\b"
+    ]
+  }
+}

@@ -1,0 +1,187 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
+      <h2><i class="fas fa-history"></i> Case History</h2>
+      <a href="/cad" class="btn btn-outline-light">
+        <i class="fas fa-arrow-left"></i> Live View
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-filter"></i> Date Range Filter
+      </div>
+      <div class="card-body">
+        <form method="GET" action="/cad/history" class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label">Start Date/Time</label>
+            <input type="datetime-local" class="form-control bg-dark text-light" 
+                   name="startDate" value="${startDate}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">End Date/Time</label>
+            <input type="datetime-local" class="form-control bg-dark text-light" 
+                   name="endDate" value="${endDate}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Service</label>
+            <select class="form-select bg-dark text-light" name="service">
+              <option value="">All Services</option>
+              ${Object.entries(services).map(([key, config]) => 
+                '<option value="' + key + '"' + (serviceFilter === key ? ' selected' : '') + '>' + config.name + '</option>'
+              ).join('')}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-search"></i> Search
+            </button>
+          </div>
+        </form>
+        
+        <!-- Quick filters -->
+        <div class="mt-3">
+          <span class="text-muted me-2">Quick:</span>
+          <a href="/cad/history?startDate=${moment().subtract(1, 'hours').format('YYYY-MM-DDTHH:mm')}&endDate=${moment().format('YYYY-MM-DDTHH:mm')}" 
+             class="btn btn-sm btn-outline-secondary">Last Hour</a>
+          <a href="/cad/history?startDate=${moment().subtract(4, 'hours').format('YYYY-MM-DDTHH:mm')}&endDate=${moment().format('YYYY-MM-DDTHH:mm')}" 
+             class="btn btn-sm btn-outline-secondary">Last 4 Hours</a>
+          <a href="/cad/history?startDate=${moment().subtract(12, 'hours').format('YYYY-MM-DDTHH:mm')}&endDate=${moment().format('YYYY-MM-DDTHH:mm')}" 
+             class="btn btn-sm btn-outline-secondary">Last 12 Hours</a>
+          <a href="/cad/history?startDate=${moment().subtract(24, 'hours').format('YYYY-MM-DDTHH:mm')}&endDate=${moment().format('YYYY-MM-DDTHH:mm')}" 
+             class="btn btn-sm btn-outline-secondary">Last 24 Hours</a>
+          <a href="/cad/history?startDate=${moment().subtract(7, 'days').format('YYYY-MM-DDTHH:mm')}&endDate=${moment().format('YYYY-MM-DDTHH:mm')}" 
+             class="btn btn-sm btn-outline-secondary">Last 7 Days</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sync from PagerMon -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-sync"></i> Import from PagerMon
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3">
+          Import historical messages from PagerMon's database for the selected date range.
+        </p>
+        <button id="syncBtn" class="btn btn-warning" onclick="syncDateRange()">
+          <i class="fas fa-download"></i> Import Messages for Selected Range
+        </button>
+        <span id="syncStatus" class="ms-3"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Results -->
+<div class="row mb-3">
+  <div class="col-12">
+    <h5>
+      Found <span class="badge bg-primary">${totalCases}</span> cases
+      <small class="text-muted">
+        from ${moment(startDate).format('DD/MM/YYYY HH:mm')} 
+        to ${moment(endDate).format('DD/MM/YYYY HH:mm')}
+      </small>
+    </h5>
+  </div>
+</div>
+
+<!-- Cases Grid -->
+<div class="row" id="cases-container">
+  ${Object.entries(casesByService).filter(([key, data]) => data.cases.length > 0).map(([key, data]) => `
+    <div class="col-12 mb-4 service-section" data-service="${key}">
+      <h4 style="color: ${data.config.color};">
+        <i class="fas fa-${data.config.icon}"></i> ${data.config.name}
+        <span class="badge bg-secondary">${data.cases.length}</span>
+      </h4>
+      <div class="row">
+        ${data.cases.map(c => `
+          <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card case-card" onclick="window.location='/cad/case/${c.case_number}'">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="case-number text-white">${c.case_number}</span>
+                <span class="badge" style="background-color: ${data.config.color}">
+                  ${c.status}
+                </span>
+              </div>
+              <div class="card-body">
+                ${c.address ? `
+                  <p class="mb-2 text-white">
+                    <i class="fas fa-map-marker-alt text-danger"></i> ${c.address}
+                  </p>
+                ` : ''}
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-light">
+                    <i class="fas fa-truck"></i> ${c.resourceCount} units
+                  </span>
+                  <span class="timestamp text-light">
+                    ${moment.unix(c.first_seen).format('DD/MM HH:mm')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')}
+  
+  ${totalCases === 0 ? `
+    <div class="col-12 text-center py-5">
+      <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+      <h4 class="text-muted">No cases found for this date range</h4>
+      <p class="text-muted">Try adjusting the date range or importing from PagerMon</p>
+    </div>
+  ` : ''}
+</div>
+
+`, extraScripts: `
+<script>
+  function syncDateRange() {
+    const startDate = document.querySelector('input[name="startDate"]').value;
+    const endDate = document.querySelector('input[name="endDate"]').value;
+    const btn = document.getElementById('syncBtn');
+    const status = document.getElementById('syncStatus');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importing...';
+    status.innerHTML = '';
+    
+    fetch('/cad/api/sync-range', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate, endDate })
+    })
+    .then(res => res.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-download"></i> Import Messages for Selected Range';
+      
+      if (data.success) {
+        status.innerHTML = '<span class="text-success"><i class="fas fa-check"></i> Imported ' + data.synced + ' cases from ' + data.total + ' messages</span>';
+        // Reload page to show new cases
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        status.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + (data.error || 'Import failed') + '</span>';
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-download"></i> Import Messages for Selected Range';
+      status.innerHTML = '<span class="text-danger"><i class="fas fa-times"></i> ' + err.message + '</span>';
+    });
+  }
+</script>
+` }) %>

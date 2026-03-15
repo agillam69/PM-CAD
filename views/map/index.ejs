@@ -1,0 +1,180 @@
+<%- include('../layout', { body: `
+
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center">
+      <h2><i class="fas fa-map-marked-alt"></i> Live Incident Map</h2>
+      <div>
+        <a href="/map" class="btn btn-outline-light filter-btn ${!serviceFilter ? 'active' : ''}">
+          All
+        </a>
+        ${Object.entries(services).map(([key, config]) => 
+          '<a href="/map?service=' + key + '" ' +
+          'class="btn filter-btn ' + (serviceFilter === key ? 'active' : '') + '" ' +
+          'style="background-color: ' + config.color + '; color: white;">' +
+          '<i class="fas fa-' + config.icon + '"></i> ' + config.name +
+          '</a>'
+        ).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-9">
+    <div class="card">
+      <div class="card-body p-0">
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-3">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-list"></i> Active Incidents
+        <span class="badge bg-secondary" id="incident-count">0</span>
+      </div>
+      <div class="card-body p-0" style="max-height: 550px; overflow-y: auto;">
+        <div class="list-group list-group-flush" id="incident-list">
+          <div class="list-group-item bg-transparent text-center text-muted py-4">
+            <i class="fas fa-spinner fa-spin"></i> Loading...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+`, extraScripts: `
+<script>
+  // Initialize map centered on Victoria, Australia
+  const map = L.map('map').setView([-37.8136, 144.9631], 10);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+  
+  // Store markers
+  const markers = {};
+  const markerLayer = L.layerGroup().addTo(map);
+  
+  // Service filter
+  const serviceFilter = '${serviceFilter || ''}';
+  
+  // Custom icon function
+  function createIcon(color) {
+    return L.divIcon({
+      className: 'custom-marker',
+      html: '<div style="background-color: ' + color + '; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12]
+    });
+  }
+  
+  // Load markers
+  function loadMarkers() {
+    let url = '/map/api/markers';
+    if (serviceFilter) {
+      url += '?service=' + serviceFilter;
+    }
+    
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        // Clear existing markers
+        markerLayer.clearLayers();
+        
+        // Update incident list
+        const listEl = document.getElementById('incident-list');
+        const countEl = document.getElementById('incident-count');
+        
+        countEl.textContent = data.length;
+        
+        if (data.length === 0) {
+          listEl.innerHTML = '<div class="list-group-item bg-transparent text-center text-muted py-4">' +
+            '<i class="fas fa-check-circle"></i> No active incidents</div>';
+        } else {
+          listEl.innerHTML = data.map(function(incident) {
+            return '<a href="/cad/case/' + incident.id + '" ' +
+              'class="list-group-item list-group-item-action bg-transparent text-white" ' +
+              'style="border-left: 4px solid ' + incident.color + ';" ' +
+              'onmouseover="highlightMarker(\\'' + incident.id + '\\')" ' +
+              'onmouseout="unhighlightMarker(\\'' + incident.id + '\\')">' +
+              '<div class="d-flex justify-content-between">' +
+              '<strong class="text-white">' + incident.id + '</strong>' +
+              '<small class="text-light">' + timeAgo(incident.lastUpdated) + '</small>' +
+              '</div>' +
+              '<small class="text-truncate d-block text-light">' + (incident.address || 'No address') + '</small>' +
+              '</a>';
+          }).join('');
+        }
+        
+        // Add markers
+        const bounds = [];
+        data.forEach(function(incident) {
+          const marker = L.marker([incident.lat, incident.lng], {
+            icon: createIcon(incident.color)
+          });
+          
+          marker.bindPopup(
+            '<div style="min-width: 200px; color: #333;">' +
+            '<h6 style="margin: 0 0 8px 0; color: ' + incident.color + ';">' +
+            '<i class="fas fa-' + incident.icon + '"></i> ' + incident.id +
+            '</h6>' +
+            '<p style="margin: 0 0 8px 0; color: #333;">' + (incident.address || 'No address') + '</p>' +
+            '<a href="/cad/case/' + incident.id + '" class="btn btn-sm btn-primary" style="color: white;">View Details</a>' +
+            '</div>'
+          );
+          
+          markers[incident.id] = marker;
+          markerLayer.addLayer(marker);
+          bounds.push([incident.lat, incident.lng]);
+        });
+        
+        // Fit map to markers
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        }
+      })
+      .catch(function(err) {
+        console.error('Error loading markers:', err);
+      });
+  }
+  
+  // Highlight marker on hover
+  window.highlightMarker = function(id) {
+    if (markers[id]) {
+      markers[id].openPopup();
+    }
+  };
+  
+  window.unhighlightMarker = function(id) {
+    if (markers[id]) {
+      markers[id].closePopup();
+    }
+  };
+  
+  // Initial load
+  loadMarkers();
+  
+  // Refresh every 30 seconds
+  setInterval(loadMarkers, 30000);
+  
+  // Listen for real-time updates
+  socket.on('caseUpdate', function(data) {
+    if (data.case && data.case.latitude && data.case.longitude) {
+      loadMarkers();
+    }
+  });
+</script>
+
+<style>
+  .custom-marker {
+    background: transparent;
+    border: none;
+  }
+</style>
+` }) %>
