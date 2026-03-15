@@ -42,6 +42,11 @@ router.post('/message', async (req, res) => {
     return res.status(400).json({ error: 'address and message are required' });
   }
   
+  // Log full payload from PagerMon for debugging
+  console.log('=== INGEST API RECEIVED ===');
+  console.log('Full request body:', JSON.stringify(req.body, null, 2));
+  console.log('===========================');
+  
   logger.logIngest('received', { alias: alias || source || 'unknown', agency: agency || 'unknown', address });
   
   try {
