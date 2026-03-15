@@ -289,8 +289,34 @@ function extractDispatchInfo(message) {
     incidentType: null,
     incidentTypeCode: null,
     gridRef: null,
-    respondingAgencies: null
+    respondingAgencies: null,
+    // SES/TAMB specific
+    isSES: false,
+    incidentDescription: null
   };
+  
+  // Check if this is an SES/TAMB message
+  // HbS260351916 TAMB - TREE DOWN - TRAFFIC HAZARD - TREE BLOCKING 1/2 ROAD - 800M SOUTH...
+  const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*(.+?)\s*-\s*MAP:/i);
+  if (sesMatch) {
+    info.isSES = true;
+    // Split by " - " to get all segments
+    const segments = sesMatch[1].split(/\s+-\s+/);
+    // Find where location starts (contains road indicators)
+    let locationIdx = segments.length;
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (/\b(CNR|HWY|RD|ST|AVE|TRACK|TRK|SOUTH|NORTH|EAST|WEST|M\s+\d)\b/i.test(segments[i])) {
+        locationIdx = i;
+        break;
+      }
+    }
+    // Incident description is everything before the location
+    if (locationIdx > 0) {
+      info.incidentDescription = segments.slice(0, locationIdx).join(' - ').trim();
+      info.incidentType = segments[0]; // First segment is usually the incident type (TREE DOWN)
+    }
+    return info;
+  }
   
   // Check if this is a Fire/CFA message (contains F followed by 9 digits at end, or starts with response area code)
   const fireMatch = message.match(/\bF(\d{9})\b/);
@@ -714,13 +740,24 @@ function extractCaseNumber(message, patterns) {
 
 function extractAddress(message, patterns) {
   // Try SES/TAMB format first:
-  // HbS260351916 TAMB - TREE DOWN - ... - 800M SOUTH OF MT WILLS TRACK - CNR OMEO HWY/MT WILLS TRK MITTA MITTA - MAP: SVNE 336 G6
-  // Format: [incident type] - [description] - [location] - MAP: [mapref]
-  const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*.+?\s*-\s*(.+?)\s*-\s*MAP:/i);
+  // HbS260351916 TAMB - TREE DOWN - TRAFFIC HAZARD - TREE BLOCKING 1/2 ROAD - 800M SOUTH OF MT WILLS TRACK - CNR OMEO HWY/MT WILLS TRK MITTA MITTA - MAP: SVNE 336 G6
+  // Format: [TAMB] - [incident description...] - [location] - MAP: [mapref]
+  // Location is typically the last segment before MAP: that contains road/place names
+  const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*(.+?)\s*-\s*MAP:/i);
   if (sesMatch) {
-    let address = sesMatch[1].trim();
-    // Clean up CNR (corner) format: "CNR OMEO HWY/MT WILLS TRK MITTA MITTA"
-    // Keep the full intersection description
+    // Split by " - " to get all segments
+    const segments = sesMatch[1].split(/\s+-\s+/);
+    // Location is typically the last 1-2 segments (contains road names, CNR, etc.)
+    // Find the segment that looks like a location (contains road indicators)
+    let locationIdx = segments.length - 1;
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (/\b(CNR|HWY|RD|ST|AVE|TRACK|TRK|SOUTH|NORTH|EAST|WEST)\b/i.test(segments[i])) {
+        locationIdx = i;
+        break;
+      }
+    }
+    // Address is from locationIdx to end
+    const address = segments.slice(locationIdx).join(' - ').trim();
     return address;
   }
   
