@@ -10,16 +10,15 @@ const logger = require('../services/logger');
 //   repeatAPIKEY: your-api-key-here
 
 router.post('/message', async (req, res) => {
-  // Validate API key
-  const configuredApiKey = nconf.get('ingest:apiKey');
-  const providedApiKey = req.headers['apikey'] || req.headers['x-api-key'];
-  
-  if (configuredApiKey && configuredApiKey !== 'changeme') {
-    if (!providedApiKey || providedApiKey !== configuredApiKey) {
-      logger.warn('Unauthorized ingest request - invalid API key', { ip: req.ip });
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-  }
+  // API key validation disabled - uncomment to enable
+  // const configuredApiKey = nconf.get('ingest:apiKey');
+  // const providedApiKey = req.headers['apikey'] || req.headers['x-api-key'];
+  // if (configuredApiKey && configuredApiKey !== 'changeme') {
+  //   if (!providedApiKey || providedApiKey !== configuredApiKey) {
+  //     logger.warn('Unauthorized ingest request - invalid API key', { ip: req.ip });
+  //     return res.status(401).json({ error: 'Unauthorized' });
+  //   }
+  // }
   
   // Support both MessageRepeat format and extended format with alias/agency
   const { 
