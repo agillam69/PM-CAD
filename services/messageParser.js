@@ -191,9 +191,13 @@ function parseMessage(message, agency, alias = null) {
     finalMapRef = dispatchInfo.destinationMapRef;
   }
   
+  // Extract all case numbers for dual/multi-agency responses
+  const allCaseNumbers = extractAllCaseNumbers(cleanMessage);
+  
   return {
     caseNumber,
     associatedCaseNumber,
+    allCaseNumbers, // All case numbers found (for dual responses like F+E)
     service,
     address: finalAddress,
     isGPSLocation: addressResult.isGPS,
@@ -785,6 +789,35 @@ function extractCaseNumber(message, patterns) {
   }
   
   return null;
+}
+
+// Extract ALL case numbers from a message (for dual/multi-agency responses)
+// e.g., "F260306262 E26031511198" returns ['F260306262', 'E26031511198']
+function extractAllCaseNumbers(message) {
+  const caseNumbers = [];
+  
+  // Match all case number patterns
+  const patterns = [
+    /\bE(\d{11})\b/g,
+    /\bF(\d{9})\b/g,
+    /\bN(\d{9})\b/g,
+    /\bJ(\d{11})\b/g,
+    /\bS(\d{9})\b/g
+  ];
+  
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(message)) !== null) {
+      const prefix = match[0].charAt(0).toUpperCase();
+      const number = match[1];
+      const caseNumber = prefix + number;
+      if (!caseNumbers.includes(caseNumber)) {
+        caseNumbers.push(caseNumber);
+      }
+    }
+  }
+  
+  return caseNumbers;
 }
 
 function extractAddress(message, patterns) {

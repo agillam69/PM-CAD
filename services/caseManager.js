@@ -52,46 +52,68 @@ async function processMessage(messageData) {
     return { parsed, case: null, messageType: 'message', stored: true };
   }
   
-  // Upsert the case
-  const caseData = {
-    caseNumber: effectiveCaseNumber,
-    service: parsed.service,
-    address: parsed.address,
-    mapRef: parsed.mapRef,
-    timestamp: timestamp,
-    status: 'active',
-    isPriority: parsed.isPriority || false,
-    priorityReason: parsed.priorityReason || null,
-    // Incident details
-    incidentType: parsed.incidentType || parsed.caseType || null,
-    incidentDescription: parsed.incidentDescription || null,
-    signalCode: parsed.signal ? `SIG${parsed.signal}` : null,
-    responseCode: parsed.responseCode || null,
-    patientInfo: parsed.patientInfo || null
-  };
+  // Handle dual/multi-agency responses (e.g., F260306262 E26031511198)
+  // Create/update all cases found in the message
+  const allCaseNumbers = parsed.allCaseNumbers || [effectiveCaseNumber];
+  const relatedCases = allCaseNumbers.length > 1 ? allCaseNumbers.join(',') : null;
   
-  // Handle GPS coordinates directly
+  // Geocode once for all cases (they share the same location)
+  let geoResult = null;
   if (parsed.isGPSLocation && parsed.gpsCoordinates) {
-    caseData.latitude = parsed.gpsCoordinates.lat;
-    caseData.longitude = parsed.gpsCoordinates.lng;
+    geoResult = parsed.gpsCoordinates;
   } else if (parsed.address && !parsed.isGPSLocation) {
-    // Try to geocode regular addresses, with SVVB map reference fallback
     try {
-      const geoResult = await geocoder.geocodeWithMapRef(parsed.address, parsed.mapRef);
-      if (geoResult) {
-        caseData.latitude = geoResult.lat;
-        caseData.longitude = geoResult.lng;
-        if (geoResult.source) {
-          logger.debug('Geocoded via ' + geoResult.source, { address: parsed.address, mapRef: parsed.mapRef });
-        }
+      geoResult = await geocoder.geocodeWithMapRef(parsed.address, parsed.mapRef);
+      if (geoResult && geoResult.source) {
+        logger.debug('Geocoded via ' + geoResult.source, { address: parsed.address, mapRef: parsed.mapRef });
       }
     } catch (error) {
       logger.error('Geocoding failed', { address: parsed.address, error: error.message });
     }
   }
   
-  db.upsertCase(caseData);
-  logger.logCase('upsert', effectiveCaseNumber, { service: parsed.service, address: parsed.address, isPriority: parsed.isPriority });
+  // Process each case number found
+  for (const caseNum of allCaseNumbers) {
+    // Determine service from case number prefix
+    let caseService = parsed.service;
+    if (caseNum.startsWith('F')) caseService = 'fire';
+    else if (caseNum.startsWith('E')) caseService = 'ambulance';
+    else if (caseNum.startsWith('N')) caseService = 'nept';
+    else if (caseNum.startsWith('S')) caseService = 'ses';
+    else if (caseNum.startsWith('J')) caseService = 'ambulance';
+    
+    const caseData = {
+      caseNumber: caseNum,
+      service: caseService,
+      address: parsed.address,
+      mapRef: parsed.mapRef,
+      timestamp: timestamp,
+      status: 'active',
+      isPriority: parsed.isPriority || false,
+      priorityReason: parsed.priorityReason || null,
+      // Incident details
+      incidentType: parsed.incidentType || parsed.caseType || null,
+      incidentDescription: parsed.incidentDescription || null,
+      signalCode: parsed.signal ? `SIG${parsed.signal}` : null,
+      responseCode: parsed.responseCode || null,
+      patientInfo: parsed.patientInfo || null,
+      relatedCases: relatedCases
+    };
+    
+    // Add geocoding results
+    if (geoResult) {
+      caseData.latitude = geoResult.lat;
+      caseData.longitude = geoResult.lng;
+    }
+    
+    db.upsertCase(caseData);
+    logger.logCase('upsert', caseNum, { service: caseService, address: parsed.address, isPriority: parsed.isPriority, relatedCases });
+  }
+  
+  // Log if this was a dual response
+  if (allCaseNumbers.length > 1) {
+    logger.info(`Dual response detected: ${allCaseNumbers.join(', ')}`);
+  }
   
   // Log priority cases
   if (parsed.isPriority) {
