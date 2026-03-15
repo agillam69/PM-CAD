@@ -683,9 +683,12 @@ function extractAddress(message, patterns) {
       let mainAddress = parts[0];
       // Clean up any trailing cross street markers
       mainAddress = mainAddress.replace(/\s*\/\/.*$/, '').trim();
+      // Strip unit numbers: "10 / 874 FIFTEENTH ST" -> "874 FIFTEENTH ST"
+      // Also handles: "UNIT 5 / 123 MAIN ST", "APT 3/45 HIGH ST", "10/874 MAIN ST"
+      mainAddress = stripUnitNumber(mainAddress);
       return mainAddress;
     }
-    return address;
+    return stripUnitNumber(address);
   }
   
   if (!patterns || !Array.isArray(patterns)) {
@@ -711,6 +714,27 @@ function extractAddress(message, patterns) {
   }
   
   return null;
+}
+
+// Strip unit/apartment numbers from addresses for better geocoding
+// "10 / 874 FIFTEENTH ST" -> "874 FIFTEENTH ST"
+// "UNIT 5 / 123 MAIN ST" -> "123 MAIN ST"
+// "APT 3/45 HIGH ST" -> "45 HIGH ST"
+// "10/874 MAIN ST" -> "874 MAIN ST"
+function stripUnitNumber(address) {
+  if (!address) return address;
+  
+  // Pattern 1: "10 / 874 STREET" or "10/874 STREET" (unit/street number format)
+  // Match: optional prefix (UNIT, APT, etc.) + number + / + street number + rest
+  let cleaned = address.replace(/^(?:UNIT|APT|FLAT|SUITE|STE|U)?\s*\d+\s*\/\s*(\d+.*)$/i, '$1');
+  
+  // Pattern 2: "**UNIT 5** 123 MAIN ST" or "UNIT 5, 123 MAIN ST"
+  cleaned = cleaned.replace(/^\*{0,2}(?:UNIT|APT|FLAT|SUITE|STE)\s*\d+\*{0,2}[\s,]+(\d+.*)$/i, '$1');
+  
+  // Pattern 3: Handle "**APPROXIMATE**" prefix
+  cleaned = cleaned.replace(/^\*{0,2}APPROXIMATE\*{0,2}\s*/i, '');
+  
+  return cleaned.trim();
 }
 
 function extractMapRef(message, patterns) {
