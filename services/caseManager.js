@@ -119,11 +119,24 @@ async function processMessage(messageData) {
       respondingAgencies: parsed.respondingAgencies
     });
     
-    // Use alias from PagerMon as the primary resource identifier
-    // The alias is the unit name from the capcode table - use it directly
-    // Don't try to extract codes from messages - use the capcode/alias mapping
+    // Add resources from multiple sources:
+    // 1. Alias from PagerMon (unit name from capcode table)
     if (alias) {
       db.upsertResource(caseRecord.id, alias, timestamp, alias);
+    }
+    
+    // 2. Resources extracted from message text (e.g., AFP, CKORO, PP70 for CFA)
+    if (parsed.resources && parsed.resources.length > 0) {
+      for (const resource of parsed.resources) {
+        db.upsertResource(caseRecord.id, resource, timestamp, null);
+      }
+    }
+    
+    // 3. Responding agencies (for fire messages)
+    if (parsed.respondingAgencies && parsed.respondingAgencies.length > 0) {
+      for (const agency of parsed.respondingAgencies) {
+        db.upsertResource(caseRecord.id, agency, timestamp, null);
+      }
     }
   }
   
