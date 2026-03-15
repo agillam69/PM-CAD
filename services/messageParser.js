@@ -678,24 +678,29 @@ function extractCaseNumber(message, patterns) {
 
 function extractAddress(message, patterns) {
   // Try specific ambulance LOC format first:
-  // LOC 7 / 178 NORMANBY ST WARRAGUL /ALEXANDER ST //EISENHOWER ST SVVB SE 8606 A7
-  // Format: LOC [address] /[cross1] //[cross2] SVVB [mapref]
-  const ambLocMatch = message.match(/LOC\s+(.+?)(?=\s+SVVB\s+|\s+Prob\s+|\s+CC:\s*CC:|\s+Pat:|\s*$)/i);
+  // LOC 3 / 32 GLASTONBURY DR HIGHTON /CHADREE CT //CORTLAND DR M 465 C3
+  // Format: LOC [unit/street] /[cross1] //[cross2] M [mapref]
+  const ambLocMatch = message.match(/LOC\s+(.+?)(?=\s+SVVB\s+|\s+M\s+\d|\s+Prob\s+|\s+CC:|\s+Pat:|\s*$)/i);
   if (ambLocMatch) {
     let address = ambLocMatch[1].trim();
-    // Extract main address (before first /)
-    const parts = address.split(/\s+\/(?!\/)/).map(p => p.trim());
-    if (parts.length > 0) {
-      // Main address is the first part
-      let mainAddress = parts[0];
-      // Clean up any trailing cross street markers
-      mainAddress = mainAddress.replace(/\s*\/\/.*$/, '').trim();
-      // Strip unit numbers: "10 / 874 FIFTEENTH ST" -> "874 FIFTEENTH ST"
-      // Also handles: "UNIT 5 / 123 MAIN ST", "APT 3/45 HIGH ST", "10/874 MAIN ST"
-      mainAddress = stripUnitNumber(mainAddress);
-      return mainAddress;
+    
+    // Split on cross streets: / for first cross, // for second
+    // But NOT on unit/street separator (digit / digit pattern)
+    // Pattern: look for " /" followed by a letter (cross street) not a digit (unit number)
+    const crossStreetMatch = address.match(/^(.+?)\s+\/([A-Z])/i);
+    let mainAddress;
+    
+    if (crossStreetMatch) {
+      // Everything before " /[LETTER]" is the main address (including unit/street)
+      mainAddress = crossStreetMatch[1].trim();
+    } else {
+      // No cross street found, use whole address
+      mainAddress = address.replace(/\s*\/\/.*$/, '').trim();
     }
-    return stripUnitNumber(address);
+    
+    // Strip unit numbers: "3 / 32 GLASTONBURY DR" -> "32 GLASTONBURY DR"
+    mainAddress = stripUnitNumber(mainAddress);
+    return mainAddress;
   }
   
   if (!patterns || !Array.isArray(patterns)) {
