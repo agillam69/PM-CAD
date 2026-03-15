@@ -42,11 +42,23 @@ async function init() {
       status TEXT DEFAULT 'active',
       is_priority INTEGER DEFAULT 0,
       priority_reason TEXT,
+      incident_type TEXT,
+      incident_description TEXT,
+      signal_code TEXT,
+      response_code TEXT,
+      patient_info TEXT,
       first_seen INTEGER NOT NULL,
       last_updated INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  
+  // Add new columns if they don't exist (migration)
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN incident_type TEXT`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN incident_description TEXT`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN signal_code TEXT`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN response_code TEXT`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN patient_info TEXT`); } catch (e) {}
   
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_case_number ON cases(case_number)`);
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_service ON cases(service)`);
@@ -196,6 +208,11 @@ function upsertCase(caseData) {
         map_ref = COALESCE(?, map_ref),
         is_priority = CASE WHEN ? = 1 THEN 1 ELSE is_priority END,
         priority_reason = CASE WHEN ? = 1 THEN ? ELSE priority_reason END,
+        incident_type = COALESCE(?, incident_type),
+        incident_description = COALESCE(?, incident_description),
+        signal_code = COALESCE(?, signal_code),
+        response_code = COALESCE(?, response_code),
+        patient_info = COALESCE(?, patient_info),
         last_updated = ?
       WHERE case_number = ?
     `, [
@@ -207,14 +224,19 @@ function upsertCase(caseData) {
       caseData.isPriority ? 1 : 0,
       caseData.isPriority ? 1 : 0,
       caseData.priorityReason || null,
+      caseData.incidentType || null,
+      caseData.incidentDescription || null,
+      caseData.signalCode || null,
+      caseData.responseCode || null,
+      caseData.patientInfo || null,
       caseData.timestamp,
       caseData.caseNumber
     ]);
   } else {
     // Insert
     cadDb.run(`
-      INSERT INTO cases (case_number, service, address, latitude, longitude, map_ref, status, is_priority, priority_reason, first_seen, last_updated)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cases (case_number, service, address, latitude, longitude, map_ref, status, is_priority, priority_reason, incident_type, incident_description, signal_code, response_code, patient_info, first_seen, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       caseData.caseNumber,
       caseData.service,
@@ -225,6 +247,11 @@ function upsertCase(caseData) {
       caseData.status || 'active',
       caseData.isPriority ? 1 : 0,
       caseData.priorityReason || null,
+      caseData.incidentType || null,
+      caseData.incidentDescription || null,
+      caseData.signalCode || null,
+      caseData.responseCode || null,
+      caseData.patientInfo || null,
       caseData.timestamp,
       caseData.timestamp
     ]);

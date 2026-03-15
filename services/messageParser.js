@@ -238,6 +238,15 @@ function parseMessage(message, agency, alias = null) {
     incidentTypeCode: dispatchInfo.incidentTypeCode,
     gridRef: dispatchInfo.gridRef,
     respondingAgencies: dispatchInfo.respondingAgencies,
+    // Incident details (for display on cards/map)
+    incidentDescription: dispatchInfo.incidentDescription,
+    responseCode: dispatchInfo.responseCode,
+    responseAgency: dispatchInfo.responseAgency,
+    responseUrgency: dispatchInfo.responseUrgency,
+    patientInfo: dispatchInfo.patientInfo,
+    patientCount: dispatchInfo.patientCount,
+    patientAge: dispatchInfo.patientAge,
+    patientGender: dispatchInfo.patientGender,
     // Case type flags
     isREFCOM,   // J cases - Referral ambulance
     isERTCOM,   // E cases - Emergency ambulance  
@@ -439,6 +448,33 @@ function extractDispatchInfo(message) {
   if (caseTypeMatch) {
     info.caseTypeCode = caseTypeMatch[1];
     info.caseType = caseTypeMatch[3].trim();
+    // Extract response code letter (A=Ambulance, F=Fire, P=Police, etc.)
+    info.responseCode = caseTypeMatch[2];
+  }
+  
+  // Problem/Incident description (Prob FALLEN ONTO CONCRETE)
+  const probMatch = message.match(/Prob\s+(.+?)(?=\s+Pat:|\s+CC:|\s*$)/i);
+  if (probMatch) {
+    info.incidentDescription = probMatch[1].trim();
+  }
+  
+  // Patient info (Pat: 1 Age:53 Years Gen:F)
+  const patMatch = message.match(/Pat:\s*(\d+)\s*Age:\s*(\d+)\s*(\w+)\s*Gen:\s*([MFU])/i);
+  if (patMatch) {
+    info.patientCount = parseInt(patMatch[1]);
+    info.patientAge = parseInt(patMatch[2]);
+    info.patientAgeUnit = patMatch[3]; // Years, Months, etc.
+    info.patientGender = patMatch[4]; // M, F, U
+    info.patientInfo = `${patMatch[1]} patient(s), Age: ${patMatch[2]} ${patMatch[3]}, ${patMatch[4] === 'M' ? 'Male' : patMatch[4] === 'F' ? 'Female' : 'Unknown'}`;
+  }
+  
+  // Response type from CC line (A AMBULANCE-URGENT WITHIN 25 MINS)
+  // First letter indicates: A=Ambulance, F=Fire, P=Police, S=SES
+  const responseTypeMatch = message.match(/\b([AFPS])\s+(AMBULANCE|FIRE|POLICE|SES)[-\s]*(URGENT|ROUTINE|EMERGENCY)?/i);
+  if (responseTypeMatch) {
+    info.responseCode = responseTypeMatch[1];
+    info.responseAgency = responseTypeMatch[2];
+    info.responseUrgency = responseTypeMatch[3] || null;
   }
   
   return info;

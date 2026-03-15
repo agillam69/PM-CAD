@@ -61,7 +61,13 @@ async function processMessage(messageData) {
     timestamp: timestamp,
     status: 'active',
     isPriority: parsed.isPriority || false,
-    priorityReason: parsed.priorityReason || null
+    priorityReason: parsed.priorityReason || null,
+    // Incident details
+    incidentType: parsed.incidentType || parsed.caseType || null,
+    incidentDescription: parsed.incidentDescription || null,
+    signalCode: parsed.signal ? `SIG${parsed.signal}` : null,
+    responseCode: parsed.responseCode || null,
+    patientInfo: parsed.patientInfo || null
   };
   
   // Handle GPS coordinates directly

@@ -102,14 +102,26 @@
                 </span>
               </div>
               <div class="card-body">
+                ${c.incident_description ? `
+                  <p class="mb-2 text-warning fw-bold">
+                    <i class="fas fa-exclamation-circle"></i> ${c.incident_description}
+                  </p>
+                ` : ''}
+                ${c.incident_type ? `
+                  <p class="mb-1">
+                    <span class="badge bg-info">${c.incident_type}</span>
+                    ${c.signal_code ? '<span class="badge bg-danger ms-1">' + c.signal_code + '</span>' : ''}
+                    ${c.response_code ? '<span class="badge bg-secondary ms-1">' + c.response_code + '</span>' : ''}
+                  </p>
+                ` : ''}
                 ${c.address ? `
                   <p class="mb-2 text-white">
                     <i class="fas fa-map-marker-alt text-danger"></i> ${c.address}
                   </p>
                 ` : ''}
-                ${c.map_ref ? `
-                  <p class="mb-2 text-light">
-                    <i class="fas fa-map"></i> Map: ${c.map_ref}
+                ${c.patient_info ? `
+                  <p class="mb-1 text-info small">
+                    <i class="fas fa-user-injured"></i> ${c.patient_info}
                   </p>
                 ` : ''}
                 <div class="d-flex justify-content-between align-items-center">
