@@ -7,6 +7,12 @@ const logger = require('./logger');
 async function processMessage(messageData) {
   // Use alias from the API packet if available
   const alias = messageData.alias || null;
+  
+  // Debug: log alias for troubleshooting
+  if (alias) {
+    console.log(`Processing message with alias: ${alias}`);
+  }
+  
   const parsed = messageParser.parseMessage(messageData.message, messageData.agency, alias);
   
   const timestamp = messageData.timestamp || Math.floor(Date.now() / 1000);
@@ -120,9 +126,12 @@ async function processMessage(messageData) {
     });
     
     // Add resources from multiple sources:
-    // 1. Alias from PagerMon (unit name from capcode table)
+    // 1. Alias from PagerMon (unit name from capcode table) - THIS IS THE PRIMARY RESOURCE
     if (alias) {
+      console.log(`Adding resource for case ${effectiveCaseNumber}: ${alias}`);
       db.upsertResource(caseRecord.id, alias, timestamp, alias);
+    } else {
+      console.log(`No alias for case ${effectiveCaseNumber}`);
     }
     
     // 2. Resources extracted from message text (e.g., AFP, CKORO, PP70 for CFA)
