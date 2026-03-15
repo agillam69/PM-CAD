@@ -135,8 +135,8 @@ async function processMessage(messageData) {
       respondingAgencies: parsed.respondingAgencies
     });
     
-    // Add resources from multiple sources:
-    // 1. Alias from PagerMon (unit name from capcode table) - THIS IS THE PRIMARY RESOURCE
+    // Add resource from alias (unit name from PagerMon capcode table)
+    // Disabled: extracted resource codes from message text to avoid duplication
     if (alias) {
       console.log(`Adding resource for case ${effectiveCaseNumber}: ${alias}`);
       db.upsertResource(caseRecord.id, alias, timestamp, alias);
@@ -144,19 +144,19 @@ async function processMessage(messageData) {
       console.log(`No alias for case ${effectiveCaseNumber}`);
     }
     
-    // 2. Resources extracted from message text (e.g., AFP, CKORO, PP70 for CFA)
-    if (parsed.resources && parsed.resources.length > 0) {
-      for (const resource of parsed.resources) {
-        db.upsertResource(caseRecord.id, resource, timestamp, null);
-      }
-    }
+    // DISABLED: Resources extracted from message text - using alias instead
+    // if (parsed.resources && parsed.resources.length > 0) {
+    //   for (const resource of parsed.resources) {
+    //     db.upsertResource(caseRecord.id, resource, timestamp, null);
+    //   }
+    // }
     
-    // 3. Responding agencies (for fire messages)
-    if (parsed.respondingAgencies && parsed.respondingAgencies.length > 0) {
-      for (const agency of parsed.respondingAgencies) {
-        db.upsertResource(caseRecord.id, agency, timestamp, null);
-      }
-    }
+    // DISABLED: Responding agencies - using alias instead
+    // if (parsed.respondingAgencies && parsed.respondingAgencies.length > 0) {
+    //   for (const agency of parsed.respondingAgencies) {
+    //     db.upsertResource(caseRecord.id, agency, timestamp, null);
+    //   }
+    // }
   }
   
   return {
