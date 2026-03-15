@@ -74,6 +74,7 @@ async function init() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       case_id INTEGER NOT NULL,
       resource_code TEXT NOT NULL,
+      alias_name TEXT,
       first_seen INTEGER NOT NULL,
       last_seen INTEGER NOT NULL,
       status TEXT DEFAULT 'assigned',
@@ -83,6 +84,13 @@ async function init() {
   `);
   
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_case_resources_case_id ON case_resources(case_id)`);
+  
+  // Add alias_name column if it doesn't exist (migration for existing DBs)
+  try {
+    cadDb.run(`ALTER TABLE case_resources ADD COLUMN alias_name TEXT`);
+  } catch (e) {
+    // Column already exists
+  }
   
   // Unknown/unspecified alias messages table
   cadDb.run(`
@@ -391,13 +399,13 @@ function upsertResource(caseId, resourceCode, timestamp, aliasName = null) {
   ));
   
   if (existing) {
-    cadDb.run('UPDATE case_resources SET last_seen = ? WHERE case_id = ? AND resource_code = ?',
-      [timestamp, caseId, resourceCode]);
+    cadDb.run('UPDATE case_resources SET last_seen = ?, alias_name = COALESCE(?, alias_name) WHERE case_id = ? AND resource_code = ?',
+      [timestamp, aliasName, caseId, resourceCode]);
   } else {
     cadDb.run(`
-      INSERT INTO case_resources (case_id, resource_code, first_seen, last_seen)
-      VALUES (?, ?, ?, ?)
-    `, [caseId, resourceCode, timestamp, timestamp]);
+      INSERT INTO case_resources (case_id, resource_code, alias_name, first_seen, last_seen)
+      VALUES (?, ?, ?, ?, ?)
+    `, [caseId, resourceCode, aliasName, timestamp, timestamp]);
   }
   saveDb();
   return { changes: 1 };
