@@ -677,7 +677,27 @@ function extractCaseNumber(message, patterns) {
 }
 
 function extractAddress(message, patterns) {
-  // Try specific ambulance LOC format first:
+  // Try SES/TAMB format first:
+  // HbS260351916 TAMB - TREE DOWN - ... - 800M SOUTH OF MT WILLS TRACK - CNR OMEO HWY/MT WILLS TRK MITTA MITTA - MAP: SVNE 336 G6
+  // Format: [incident type] - [description] - [location] - MAP: [mapref]
+  const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*.+?\s*-\s*(.+?)\s*-\s*MAP:/i);
+  if (sesMatch) {
+    let address = sesMatch[1].trim();
+    // Clean up CNR (corner) format: "CNR OMEO HWY/MT WILLS TRK MITTA MITTA"
+    // Keep the full intersection description
+    return address;
+  }
+  
+  // Try CFA/Fire format:
+  // F260306189 STRUC1 BATTERY EXPLOSION 25 WALSH RD WARRNAMBOOL /BRADLEY ST //CLAVENS RD
+  // Format: [case] [type] [address] /[cross1] //[cross2]
+  const cfaMatch = message.match(/(?:STRUC|ALAR|GRASS|SCRUB|INCI|HZMT|RESC|OTHR)\d*\s+(.+?)(?=\s+\/[A-Z]|\s+SVSM|\s+M\s+\d|\s*$)/i);
+  if (cfaMatch) {
+    let address = cfaMatch[1].trim();
+    return stripUnitNumber(address);
+  }
+  
+  // Try specific ambulance LOC format:
   // LOC 3 / 32 GLASTONBURY DR HIGHTON /CHADREE CT //CORTLAND DR M 465 C3
   // Format: LOC [unit/street] /[cross1] //[cross2] M [mapref]
   const ambLocMatch = message.match(/LOC\s+(.+?)(?=\s+SVVB\s+|\s+M\s+\d|\s+Prob\s+|\s+CC:|\s+Pat:|\s*$)/i);
