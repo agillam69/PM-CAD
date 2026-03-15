@@ -527,6 +527,10 @@ function findRecentCaseForAlias(alias, service) {
   
   const recent = recentCasesByAlias.get(alias.toUpperCase());
   if (recent && Date.now() - recent.timestamp < 60 * 60 * 1000) { // Within 1 hour
+    // Must be same service type to prevent cross-service merging
+    if (recent.service && recent.service !== service) {
+      return null;
+    }
     return recent.caseNumber;
   }
   
@@ -537,9 +541,12 @@ function findRecentCaseForAlias(alias, service) {
 function findRecentCaseForUnit(resources, service) {
   if (resources.length === 0) return null;
   
-  // Look for a recent case with matching resources ONLY
-  // Do NOT match by service alone - that causes unrelated cases to merge
+  // Look for a recent case with matching resources AND same service
+  // This prevents cross-service merging (e.g., CFA case merged with Ambulance)
   for (const recentCase of recentCases) {
+    // Must be same service type
+    if (recentCase.service !== service) continue;
+    
     // Check if any resource matches
     for (const resource of resources) {
       if (recentCase.resources.has(resource)) {
