@@ -87,6 +87,23 @@ router.get('/priority', (req, res) => {
   });
 });
 
+// Messages view (non-case messages like group pages, info, etc.)
+router.get('/messages', (req, res) => {
+  const services = nconf.get('services') || {};
+  const serviceFilter = req.query.service || null;
+  const limit = parseInt(req.query.limit) || 100;
+  
+  const messages = db.getMessages(limit, serviceFilter);
+  
+  res.render('cad/messages', {
+    pageTitle: 'Messages - CAD',
+    services,
+    messages,
+    serviceFilter,
+    moment
+  });
+});
+
 // Single service view
 router.get('/service/:service', (req, res) => {
   const services = nconf.get('services') || {};

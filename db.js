@@ -105,6 +105,23 @@ async function init() {
     )
   `);
   
+  // General messages table (messages without case numbers - group pages, info, etc.)
+  cadDb.run(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message TEXT NOT NULL,
+      address TEXT,
+      timestamp INTEGER NOT NULL,
+      source TEXT,
+      alias TEXT,
+      agency TEXT,
+      service TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  cadDb.run(`CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp)`);
+  
   // Save initial state
   saveDb();
   
@@ -474,6 +491,60 @@ function getUnknownMessages(limit = 100) {
   `, [limit]));
 }
 
+// Add general message (non-case messages like group pages, info, etc.)
+function addMessage(messageData) {
+  cadDb.run(`
+    INSERT INTO messages (message, address, timestamp, source, alias, agency, service)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `, [
+    messageData.message,
+    messageData.address || null,
+    messageData.timestamp,
+    messageData.source || null,
+    messageData.alias || null,
+    messageData.agency || null,
+    messageData.service || null
+  ]);
+  saveDb();
+  return { changes: 1 };
+}
+
+// Get general messages
+function getMessages(limit = 100, service = null) {
+  if (service) {
+    return resultToObjects(cadDb.exec(`
+      SELECT * FROM messages 
+      WHERE service = ?
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `, [service, limit]));
+  }
+  return resultToObjects(cadDb.exec(`
+    SELECT * FROM messages 
+    ORDER BY timestamp DESC
+    LIMIT ?
+  `, [limit]));
+}
+
+// Get messages by date range
+function getMessagesByDateRange(startTime, endTime, service = null) {
+  const fromTime = Math.floor(new Date(startTime).getTime() / 1000);
+  const toTime = Math.floor(new Date(endTime).getTime() / 1000);
+  
+  if (service) {
+    return resultToObjects(cadDb.exec(`
+      SELECT * FROM messages 
+      WHERE timestamp >= ? AND timestamp <= ? AND service = ?
+      ORDER BY timestamp DESC
+    `, [fromTime, toTime, service]));
+  }
+  return resultToObjects(cadDb.exec(`
+    SELECT * FROM messages 
+    WHERE timestamp >= ? AND timestamp <= ?
+    ORDER BY timestamp DESC
+  `, [fromTime, toTime]));
+}
+
 // Close old cases (1 hour timeout unless activity)
 function closeOldCases(timeoutSeconds = 3600) {
   const cutoffTime = Math.floor(Date.now() / 1000) - timeoutSeconds;
@@ -501,6 +572,9 @@ module.exports = {
   getGeocodedCases,
   addUnknownMessage,
   getUnknownMessages,
+  addMessage,
+  getMessages,
+  getMessagesByDateRange,
   closeOldCases,
   fixCaseServiceFromPrefix
 };

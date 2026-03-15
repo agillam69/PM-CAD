@@ -38,8 +38,18 @@ async function processMessage(messageData) {
   const effectiveCaseNumber = parsed.associatedCaseNumber || parsed.caseNumber;
   
   if (!effectiveCaseNumber) {
-    // No case number and couldn't associate with recent case
-    return { parsed, case: null, messageType: parsed.messageType };
+    // No case number - store as general message (group pages, info, etc.)
+    console.log(`Storing as general message (no case number): ${alias || 'unknown alias'}`);
+    db.addMessage({
+      message: messageData.message,
+      address: messageData.address,
+      timestamp: timestamp,
+      source: messageData.source,
+      alias: alias,
+      agency: messageData.agency,
+      service: parsed.service
+    });
+    return { parsed, case: null, messageType: 'message', stored: true };
   }
   
   // Upsert the case
