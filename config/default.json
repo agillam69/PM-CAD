@@ -20,7 +20,7 @@
     }
   },
   "geocoding": {
-    "provider": "vicmaps",
+    "provider": "nominatim",
     "nominatim": {
       "url": "https://nominatim.openstreetmap.org/search",
       "defaultState": "VIC",
