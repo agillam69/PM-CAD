@@ -819,6 +819,15 @@ function extractAddress(message, patterns) {
     return stripUnitNumber(address);
   }
   
+  // FRV/ALERT format with address before cross streets:
+  // @@ALERT 04504 MR 1A AFEM CARDIAC OR RESP ARREST... 84 CHAMBERS RD ALTONA NORTH /MURPHY ST //NEAL CT M 55 A1
+  // HbWBEE60 ALARC1 ASE - INSIDE FIP... 235 HOPPERS LANE WERRIBEE /ROTH ST //OLD SNEYDES RD M 206 H5
+  // Pattern: [street number] [street name] [suburb] /[cross1] //[cross2] M [mapref]
+  const frvMatch = message.match(/(\d+\s+[A-Z][A-Z\s]+(?:RD|ST|AVE|DR|CT|PL|WAY|LANE|CRES|HWY|TCE|GR|BLVD|CL|CR|RISE|PDE|WALK|MEWS|GROVE|CIRCUIT|COURT|PLACE|DRIVE|ROAD|STREET|AVENUE|TERRACE|PARADE|HIGHWAY|CRESCENT|BOULEVARD|CLOSE)[A-Z\s]*?)\s+\/[A-Z]/i);
+  if (frvMatch) {
+    return stripUnitNumber(frvMatch[1].trim());
+  }
+  
   // Generic format: [CASE] [INCIDENT] AT [ADDRESS] MAP [REF]
   // E839077770 P1 CARDIAC ARREST AT 45 QUEEN ST RICHMOND MAP 135 B5
   // F955460381 RESCUE AT 77 FARM LANE PAKENHAM MAP 193 A4
