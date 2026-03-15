@@ -503,6 +503,55 @@ function extractDispatchInfo(message) {
     info.responseUrgency = responseTypeMatch[3] || null;
   }
   
+  // Generic incident format: [CASE] [INCIDENT TYPE] AT [ADDRESS] MAP [REF] [DETAILS]
+  // E839077770 P1 CARDIAC ARREST AT 45 QUEEN ST RICHMOND MAP 135 B5 CPR IN PROGRESS
+  // F955460381 RESCUE AT 77 FARM LANE PAKENHAM MAP 193 A4 PERSONS TRAPPED
+  // S644684535 TARP REQUIRED AT 99 STORM WAY RINGWOOD MAP 152 E11 ROOF DAMAGE
+  const genericIncidentMatch = message.match(/^[AEFNJS]\d{9,11}\s+(?:P\d\s+)?(.+?)\s+AT\s+(.+?)\s+MAP\s+(\d+\s*[A-Z]\d+)(?:\s+(.+))?$/i);
+  if (genericIncidentMatch && !info.incidentDescription) {
+    info.incidentDescription = genericIncidentMatch[1].trim();
+    // Additional details after MAP ref
+    if (genericIncidentMatch[4]) {
+      info.incidentDetails = genericIncidentMatch[4].trim();
+    }
+  }
+  
+  // Priority level (P1, P2, P3)
+  const priorityLevelMatch = message.match(/\bP([123])\b/);
+  if (priorityLevelMatch) {
+    info.priorityLevel = parseInt(priorityLevelMatch[1]);
+    if (info.priorityLevel === 1) {
+      info.signal = 1; // P1 = Code 1
+    }
+  }
+  
+  // Units assigned format: [CASE] UNITS ASSIGNED [UNITS...]
+  const unitsMatch = message.match(/UNITS ASSIGNED\s+(.+)$/i);
+  if (unitsMatch) {
+    info.assignedUnits = unitsMatch[1].trim().split(/\s+/);
+  }
+  
+  // Update status: [CASE] UPDATE [STATUS]
+  const updateMatch = message.match(/UPDATE\s+(ENROUTE|ON SCENE|STAND DOWN|ADDITIONAL UNITS|COMPLETED|CANCELLED)/i);
+  if (updateMatch) {
+    info.updateStatus = updateMatch[1].toUpperCase();
+  }
+  
+  // NEPT Transfer format: N{9} TRANSFER FROM [origin] TO [destination]
+  const transferMatch = message.match(/TRANSFER FROM\s+(.+?)\s+TO\s+(.+)$/i);
+  if (transferMatch) {
+    info.pickup = transferMatch[1].trim();
+    info.destination = transferMatch[2].trim();
+    info.incidentType = 'NEPT Transfer';
+  }
+  
+  // NEPT Appointment format: N{9} APPOINTMENT AT [location]
+  const appointmentMatch = message.match(/APPOINTMENT AT\s+(.+)$/i);
+  if (appointmentMatch) {
+    info.destination = appointmentMatch[1].trim();
+    info.incidentType = 'NEPT Appointment';
+  }
+  
   return info;
 }
 
@@ -768,6 +817,15 @@ function extractAddress(message, patterns) {
   if (cfaMatch) {
     let address = cfaMatch[1].trim();
     return stripUnitNumber(address);
+  }
+  
+  // Generic format: [CASE] [INCIDENT] AT [ADDRESS] MAP [REF]
+  // E839077770 P1 CARDIAC ARREST AT 45 QUEEN ST RICHMOND MAP 135 B5
+  // F955460381 RESCUE AT 77 FARM LANE PAKENHAM MAP 193 A4
+  // S644684535 TARP REQUIRED AT 99 STORM WAY RINGWOOD MAP 152 E11
+  const genericMatch = message.match(/\sAT\s+(.+?)\s+MAP\s+\d+\s*[A-Z]\d+/i);
+  if (genericMatch) {
+    return stripUnitNumber(genericMatch[1].trim());
   }
   
   // Try specific ambulance LOC format:
