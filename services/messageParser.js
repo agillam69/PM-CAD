@@ -821,16 +821,32 @@ function extractAllCaseNumbers(message) {
 }
 
 function extractAddress(message, patterns) {
-  // Try SES/TAMB format first:
-  // HbS260351916 TAMB - TREE DOWN - TRAFFIC HAZARD - TREE BLOCKING 1/2 ROAD - 800M SOUTH OF MT WILLS TRACK - CNR OMEO HWY/MT WILLS TRK MITTA MITTA - MAP: SVNE 336 G6
-  // Format: [TAMB] - [incident description...] - [location] - MAP: [mapref]
-  // Location is typically the last segment before MAP: that contains road/place names
+  // Try SES format with " - MAP:" marker
+  // HbS260351966 GEEL - TREE DOWN - TRAFFIC HAZARD - TREE IN ONE LANE - NORTHBOUND - CNR PRINCES HWY/CHURCH ST GEELONG WEST - MAP: M441 K11
+  // HbS260351969 ALEX - TREE DOWN - TRAFFIC HAZARD - CNR YARCK RD/PENNYS RD TERIP TERIP - MAP: SVNE 365 B2
+  // HbS260351916 TAMB - TREE DOWN - TRAFFIC HAZARD - CNR OMEO HWY/MT WILLS TRK MITTA MITTA - MAP: SVNE 336 G6
+  // Format: HbS[case] [unit] - [incident...] - [location] - MAP: [mapref]
+  const sesMapMatch = message.match(/HbS\d+\s+\w+\s+-\s+(.+?)\s+-\s+MAP:/i);
+  if (sesMapMatch) {
+    // Split by " - " to get all segments
+    const segments = sesMapMatch[1].split(/\s+-\s+/);
+    // Location is typically the last segment that contains road indicators (CNR, HWY, RD, ST, etc.)
+    let locationIdx = segments.length - 1;
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (/\b(CNR|HWY|RD|ST|AVE|DR|CT|PL|WAY|LANE|TRACK|TRK)\b/i.test(segments[i])) {
+        locationIdx = i;
+        break;
+      }
+    }
+    // Address is from locationIdx to end
+    const address = segments.slice(locationIdx).join(' - ').trim();
+    return address;
+  }
+  
+  // Legacy SES/TAMB format (fallback)
   const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*(.+?)\s*-\s*MAP:/i);
   if (sesMatch) {
-    // Split by " - " to get all segments
     const segments = sesMatch[1].split(/\s+-\s+/);
-    // Location is typically the last 1-2 segments (contains road names, CNR, etc.)
-    // Find the segment that looks like a location (contains road indicators)
     let locationIdx = segments.length - 1;
     for (let i = segments.length - 1; i >= 0; i--) {
       if (/\b(CNR|HWY|RD|ST|AVE|TRACK|TRK|SOUTH|NORTH|EAST|WEST)\b/i.test(segments[i])) {
@@ -838,7 +854,6 @@ function extractAddress(message, patterns) {
         break;
       }
     }
-    // Address is from locationIdx to end
     const address = segments.slice(locationIdx).join(' - ').trim();
     return address;
   }
