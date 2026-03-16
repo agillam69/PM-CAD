@@ -91,6 +91,24 @@ function parseMessage(message, agency, alias = null) {
     };
   }
   
+  // Filter out info/reference messages (RE:, PEER SUPPORT, ACK, etc.)
+  // @@ALERT RE: S260351959 - PEER SUPPORT 'VICKY' - AWARE & ACK THIS JOB [PEER_SUPP]
+  if (/\bRE:\s*[ENFJS]\d+/i.test(cleanMessage) || 
+      /\bPEER\s*SUPPORT\b/i.test(cleanMessage) ||
+      /\bAWARE\s*&\s*ACK\b/i.test(cleanMessage)) {
+    return {
+      caseNumber: null,
+      service: determineService(agency, services),
+      address: null,
+      mapRef: null,
+      resources: [],
+      messageType: 'info',
+      isFiltered: false,
+      raw: message,
+      pagerMode: pagerMode
+    };
+  }
+  
   // Determine service type from agency
   let service = determineService(agency, services);
   
