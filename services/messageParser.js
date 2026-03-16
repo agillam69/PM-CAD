@@ -852,6 +852,25 @@ function extractAddress(message, patterns) {
     return stripUnitNumber(address);
   }
   
+  // Fire ALERT format with incident codes like INCIC3, HZ 1A, IN 1A, NOSTC1
+  // @@ALERT LRNE50 INCIC3 WASHAWAY RESULT OF ACCIDENT GREAT OCEAN RD EASTERN VIEW SVC 6907 A9
+  // @@ALERT MBRK2 INCIC3 WASHAWAY RESULT OF ACCIDENT CNR MANCHESTER RD/BRICE AV MOOROOLBARK M 37 F12
+  // @@ALERT 05108 HZ 1A WASHAWAY RESULT OF ACCIDENT CNR WESTERN RING RD/FURLONG RD SUNSHINE NORTH M 26 E6
+  // @@ALERT 04310 IN 1A * VEHICLE ACCIDENT - POSS PERSON TRAPPED WESTERN RING RD CAIRNLEA M 26 A7
+  // @@ALERT 07502 NOSTC1 TRUCK FIRE CNR WYNDHAM ST/KNIGHT ST SHEPPARTON SVNE 8391 G9
+  // Pattern: address ends before M/SVC/SVNE [mapref] or (xxxxxx) grid ref
+  const fireAlertMatch = message.match(/@@ALERT\s+\S+\s+(?:INCI\w*|HZ\s*\d*\w*|IN\s*\d*\w*|NOST\w*|STRUC\w*|ALAR\w*|GRASS\w*|SCRUB\w*|HZMT\w*|RESC\w*|OTHR\w*)\s+(?:\*\s*)?[A-Z][A-Z\s\-]+?(?:CNR\s+)?([A-Z][A-Z0-9\s\/'-]+?(?:RD|ST|AVE|DR|CT|PL|WAY|LN|LANE|CRES|HWY|TCE|GR|BLVD|VIEW|NORTH|SOUTH|EAST|WEST)[A-Z\s]*?)\s+(?:SVC|SVNE|M)\s+\d/i);
+  if (fireAlertMatch) {
+    return fireAlertMatch[1].trim();
+  }
+  
+  // Simpler fire format: find address before M/SVC/SVNE [mapref]
+  // Look for CNR or street address pattern before map reference
+  const fireMapRefMatch = message.match(/((?:CNR\s+)?[A-Z][A-Z0-9\s\/'-]+?(?:RD|ST|AVE|DR|CT|PL|WAY|LN|LANE|CRES|HWY|TCE|GR|BLVD|VIEW)[A-Z\s]*?[A-Z]+)\s+(?:SVC|SVNE|M)\s+\d+\s*[A-Z]?\d*/i);
+  if (fireMapRefMatch) {
+    return fireMapRefMatch[1].trim();
+  }
+  
   // FRV/ALERT format with address before cross streets:
   // @@ALERT 04504 MR 1A AFEM CARDIAC OR RESP ARREST... 84 CHAMBERS RD ALTONA NORTH /MURPHY ST //NEAL CT M 55 A1
   // HbWBEE60 ALARC1 ASE - INSIDE FIP... 235 HOPPERS LANE WERRIBEE /ROTH ST //OLD SNEYDES RD M 206 H5
