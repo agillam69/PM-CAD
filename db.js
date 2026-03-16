@@ -429,12 +429,17 @@ function addCaseMessage(caseId, messageData) {
   ]);
   
   // Update message count and check for Level 2 escalation
-  const messageCount = getOne(cadDb.exec(`SELECT COUNT(*) as count FROM case_messages WHERE case_id = ?`, [caseId]));
-  const count = messageCount ? messageCount.count : 1;
+  // Count UNIQUE messages only (exclude duplicates from different sources)
+  const uniqueMessageCount = getOne(cadDb.exec(`SELECT COUNT(DISTINCT message) as count FROM case_messages WHERE case_id = ?`, [caseId]));
+  const uniqueCount = uniqueMessageCount ? uniqueMessageCount.count : 1;
   
-  // Auto-escalate to Level 2 if 6+ messages
-  const newLevel = count >= 6 ? 2 : 1;
-  cadDb.run(`UPDATE cases SET message_count = ?, incident_level = MAX(incident_level, ?) WHERE id = ?`, [count, newLevel, caseId]);
+  // Total message count (for display)
+  const totalMessageCount = getOne(cadDb.exec(`SELECT COUNT(*) as count FROM case_messages WHERE case_id = ?`, [caseId]));
+  const totalCount = totalMessageCount ? totalMessageCount.count : 1;
+  
+  // Auto-escalate to Level 2 if 6+ UNIQUE messages (not duplicates from different sources)
+  const newLevel = uniqueCount >= 6 ? 2 : 1;
+  cadDb.run(`UPDATE cases SET message_count = ?, incident_level = MAX(incident_level, ?) WHERE id = ?`, [totalCount, newLevel, caseId]);
   
   saveDb();
   return { changes: 1 };
