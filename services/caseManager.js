@@ -163,19 +163,21 @@ async function processMessage(messageData) {
       respondingAgencies: parsed.respondingAgencies
     });
     
-    // For fire cases: use extracted fire units from message if available
-    // Otherwise fall back to capcode alias
+    // Always add capcode alias as resource (identifies the station/brigade)
+    if (alias) {
+      console.log(`Adding capcode resource for case ${effectiveCaseNumber}: ${alias}`);
+      db.upsertResource(caseRecord.id, alias, timestamp, alias);
+    }
+    
+    // For fire cases: ALSO add extracted fire units (fine-tunes specific appliances)
     if (parsed.isFire && parsed.fireUnits && parsed.fireUnits.length > 0) {
       console.log(`Adding fire units for case ${effectiveCaseNumber}: ${parsed.fireUnits.join(', ')}`);
       for (const unit of parsed.fireUnits) {
-        db.upsertResource(caseRecord.id, unit, timestamp, null);
+        // Don't duplicate if unit code matches the alias
+        if (unit !== alias) {
+          db.upsertResource(caseRecord.id, unit, timestamp, null);
+        }
       }
-    } else if (alias) {
-      // For non-fire cases or when no units extracted: use capcode alias
-      console.log(`Adding resource for case ${effectiveCaseNumber}: ${alias}`);
-      db.upsertResource(caseRecord.id, alias, timestamp, alias);
-    } else {
-      console.log(`No alias for case ${effectiveCaseNumber}`);
     }
   }
   
