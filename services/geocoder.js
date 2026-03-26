@@ -170,7 +170,8 @@ async function tryNominatimSearch(baseUrl, query) {
     q: query,
     format: 'json',
     limit: 1,
-    addressdetails: 1
+    addressdetails: 1,
+    countrycodes: 'au'  // Restrict to Australia
   };
   
   try {
@@ -184,9 +185,25 @@ async function tryNominatimSearch(baseUrl, query) {
     
     if (response.data && response.data.length > 0) {
       const result = response.data[0];
+      const lat = parseFloat(result.lat);
+      const lng = parseFloat(result.lon);
+      
+      // Validate coordinates are within Australia bounds
+      // Australia: lat -10 to -44, lng 113 to 154
+      if (lat < -44 || lat > -10 || lng < 113 || lng > 154) {
+        console.log(`Geocoding: Result outside Australia bounds for "${query}": ${lat}, ${lng}`);
+        return null;
+      }
+      
+      // Extra validation for Victoria (most common)
+      // Victoria: lat -34 to -39, lng 141 to 150
+      const isVictoria = lat >= -39 && lat <= -34 && lng >= 141 && lng <= 150;
+      
+      console.log(`Geocoding: Success for "${query}" -> ${lat}, ${lng}${isVictoria ? ' (VIC)' : ''}`);
+      
       return {
-        lat: parseFloat(result.lat),
-        lng: parseFloat(result.lon),
+        lat,
+        lng,
         displayName: result.display_name,
         confidence: parseFloat(result.importance) || 0.5,
         source: 'nominatim'
