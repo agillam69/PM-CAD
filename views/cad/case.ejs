@@ -223,7 +223,7 @@
         </div>
         
         <!-- Quick Actions -->
-        <div class="card">
+        <div class="card mb-4">
           <div class="card-header">
             <i class="fas fa-bolt"></i> Actions
           </div>
@@ -233,6 +233,21 @@
             </a>
             <a href="/cad" class="btn btn-outline-secondary w-100">
               <i class="fas fa-arrow-left"></i> Back to Board
+            </a>
+          </div>
+        </div>
+        
+        <!-- Print Options -->
+        <div class="card">
+          <div class="card-header">
+            <i class="fas fa-print"></i> Print
+          </div>
+          <div class="card-body">
+            <a href="/cad/case/<%= locals.case.case_number %>/print/dispatch" target="_blank" class="btn btn-warning w-100 mb-2">
+              <i class="fas fa-file-alt"></i> Print Dispatch Slip
+            </a>
+            <a href="/cad/case/<%= locals.case.case_number %>/print/log" target="_blank" class="btn btn-outline-info w-100">
+              <i class="fas fa-file-pdf"></i> Print Case Log
             </a>
           </div>
         </div>

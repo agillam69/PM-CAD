@@ -5,6 +5,7 @@ const moment = require('moment');
 const caseManager = require('../services/caseManager');
 const db = require('../db');
 const { ensureCanEdit, ensureAdmin } = require('../middleware/auth');
+const pdfGenerator = require('../services/pdfGenerator');
 
 // CAD Dispatch Board - Main view
 router.get('/', (req, res) => {
@@ -331,6 +332,52 @@ router.post('/api/close-old', (req, res) => {
     res.json({ success: true, closed });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// PDF: Generate dispatch slip
+router.get('/case/:caseNumber/print/dispatch', async (req, res) => {
+  try {
+    const caseNumber = req.params.caseNumber;
+    const caseDetails = caseManager.getCaseWithDetails(caseNumber);
+    
+    if (!caseDetails) {
+      return res.status(404).send('Case not found');
+    }
+    
+    // Get the most recent message for the dispatch slip
+    const messages = caseDetails.messages || [];
+    const latestMessage = messages.length > 0 ? messages[messages.length - 1].message : '';
+    
+    const pdfBuffer = await pdfGenerator.generateDispatchSlip(caseDetails, latestMessage);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="dispatch-${caseNumber}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating dispatch PDF:', error);
+    res.status(500).send('Error generating PDF');
+  }
+});
+
+// PDF: Generate full case log
+router.get('/case/:caseNumber/print/log', async (req, res) => {
+  try {
+    const caseNumber = req.params.caseNumber;
+    const caseDetails = caseManager.getCaseWithDetails(caseNumber);
+    
+    if (!caseDetails) {
+      return res.status(404).send('Case not found');
+    }
+    
+    const pdfBuffer = await pdfGenerator.generateCaseLog(caseDetails);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="caselog-${caseNumber}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error generating case log PDF:', error);
+    res.status(500).send('Error generating PDF');
   }
 });
 

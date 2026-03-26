@@ -66,6 +66,19 @@ async function init() {
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN related_cases TEXT`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN radio_channel TEXT`); } catch (e) {}
   
+  // Auto-print settings table
+  cadDb.run(`
+    CREATE TABLE IF NOT EXISTS auto_print_capcodes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      capcode TEXT NOT NULL UNIQUE,
+      alias TEXT,
+      print_dispatch INTEGER DEFAULT 1,
+      print_log INTEGER DEFAULT 0,
+      enabled INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_case_number ON cases(case_number)`);
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_service ON cases(service)`);
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status)`);
