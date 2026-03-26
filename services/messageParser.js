@@ -621,11 +621,18 @@ function extractDispatchInfo(message) {
     info.priorityLocation = priorityMatch[1];
   }
   
-  // Map area and reference (SVVB NW 8205 C9)
+  // Map area and reference (SVVB NW 8205 C9 or SVVB C 8148 B8)
   const mapAreaMatch = message.match(/\s(SV[A-Z]{2})\s+([A-Z]{1,2})\s+(\d{4})\s+([A-Z]\d+)/i);
   if (mapAreaMatch) {
     info.mapArea = mapAreaMatch[1];
     info.destinationMapRef = `${mapAreaMatch[2]} ${mapAreaMatch[3]} ${mapAreaMatch[4]}`;
+  } else {
+    // Try alternate format: SVVB C 8148 B8
+    const mapAreaMatch2 = message.match(/\s(SV[A-Z]{2})\s+([A-Z])\s+(\d{4})\s+([A-Z]\d+)/i);
+    if (mapAreaMatch2) {
+      info.mapArea = mapAreaMatch2[1];
+      info.destinationMapRef = `${mapAreaMatch2[2]} ${mapAreaMatch2[3]} ${mapAreaMatch2[4]}`;
+    }
   }
   
   // Case type code (CC: AMB~ASST~R - A AMBULANCE ASSIST - RESPONSE)
