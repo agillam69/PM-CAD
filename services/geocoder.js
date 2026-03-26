@@ -21,7 +21,8 @@ async function geocode(address) {
     return cached.result;
   }
   
-  const provider = nconf.get('geocoding:provider') || 'nominatim';
+  // Force nominatim - VicMaps DNS fails from some servers
+  const provider = 'nominatim';
   
   // For Nominatim, use rate-limited queue
   if (provider === 'nominatim') {
