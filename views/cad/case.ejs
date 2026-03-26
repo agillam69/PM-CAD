@@ -103,53 +103,40 @@
     <div class="card mb-4">
       <div class="card-header">
         <i class="fas fa-history"></i> Message Timeline
-        <span class="badge bg-secondary" id="timeline-count">${(locals.case.messages.length || 0) + (locals.case.notes ? locals.case.notes.length : 0)}</span>
+        <span class="badge bg-secondary" id="timeline-count">${(locals.case.messages || []).length + (locals.case.notes || []).length}</span>
       </div>
       <div class="card-body">
         <div class="message-timeline" id="message-timeline">
-          ${(() => {
-            // Combine messages and notes, sort by timestamp
-            const messages = (locals.case.messages || []).map(m => ({ ...m, type: 'message' }));
-            const notes = (locals.case.notes || []).map(n => ({ ...n, type: 'note' }));
-            const combined = [...messages, ...notes].sort((a, b) => a.timestamp - b.timestamp);
-            
-            return combined.map(item => {
-              if (item.type === 'note') {
-                return \`
-                  <div class="message-item" style="border-left: 3px solid #ffc107;">
-                    <div class="d-flex justify-content-between">
-                      <span class="timestamp text-light">
-                        \${moment.unix(item.timestamp).format('HH:mm:ss')}
-                      </span>
-                      <span class="badge bg-warning text-dark"><i class="fas fa-sticky-note"></i> NOTE</span>
-                    </div>
-                    <p class="mb-0 mt-1 text-warning" style="word-break: break-word;">
-                      \${item.note}
-                    </p>
-                    \${item.author ? \`<small class="text-muted">- \${item.author}</small>\` : ''}
-                  </div>
-                \`;
-              } else {
-                return \`
-                  <div class="message-item">
-                    <div class="d-flex justify-content-between">
-                      <span class="timestamp text-light">
-                        \${moment.unix(item.timestamp).format('HH:mm:ss')}
-                      </span>
-                      \${item.source ? \`<span class="badge bg-secondary">\${item.source}</span>\` : ''}
-                    </div>
-                    <p class="mb-0 mt-1 text-white" style="font-family: monospace; word-break: break-word;">
-                      \${item.message}
-                    </p>
-                  </div>
-                \`;
-              }
-            }).join('');
-          })()}
-          
-          ${locals.case.messages.length === 0 && (!locals.case.notes || locals.case.notes.length === 0) ? `
-            <p class="text-muted">No messages recorded</p>
-          ` : ''}
+` + (function() {
+  var messages = (locals.case.messages || []).map(function(m) { return { timestamp: m.timestamp, type: 'message', message: m.message, source: m.source }; });
+  var notes = (locals.case.notes || []).map(function(n) { return { timestamp: n.timestamp, type: 'note', note: n.note, author: n.author }; });
+  var combined = messages.concat(notes).sort(function(a, b) { return a.timestamp - b.timestamp; });
+  
+  if (combined.length === 0) {
+    return '<p class="text-muted">No messages recorded</p>';
+  }
+  
+  return combined.map(function(item) {
+    if (item.type === 'note') {
+      return '<div class="message-item" style="border-left: 3px solid #ffc107;">' +
+        '<div class="d-flex justify-content-between">' +
+        '<span class="timestamp text-light">' + moment.unix(item.timestamp).format('HH:mm:ss') + '</span>' +
+        '<span class="badge bg-warning text-dark"><i class="fas fa-sticky-note"></i> NOTE</span>' +
+        '</div>' +
+        '<p class="mb-0 mt-1 text-warning" style="word-break: break-word;">' + item.note + '</p>' +
+        (item.author ? '<small class="text-muted">- ' + item.author + '</small>' : '') +
+        '</div>';
+    } else {
+      return '<div class="message-item">' +
+        '<div class="d-flex justify-content-between">' +
+        '<span class="timestamp text-light">' + moment.unix(item.timestamp).format('HH:mm:ss') + '</span>' +
+        (item.source ? '<span class="badge bg-secondary">' + item.source + '</span>' : '') +
+        '</div>' +
+        '<p class="mb-0 mt-1 text-white" style="font-family: monospace; word-break: break-word;">' + item.message + '</p>' +
+        '</div>';
+    }
+  }).join('');
+})() + `
         </div>
       </div>
     </div>
