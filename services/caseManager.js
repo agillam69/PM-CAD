@@ -160,7 +160,8 @@ async function processMessage(messageData) {
       incidentType: parsed.incidentType,
       incidentTypeCode: parsed.incidentTypeCode,
       gridRef: parsed.gridRef,
-      respondingAgencies: parsed.respondingAgencies
+      respondingAgencies: parsed.respondingAgencies,
+      radioChannel: parsed.fireRadioChannels ? parsed.fireRadioChannels.join(', ') : null
     });
     
     // Always add capcode alias as resource (identifies the station/brigade)

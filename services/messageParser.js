@@ -261,6 +261,7 @@ function parseMessage(message, agency, alias = null) {
     gridRef: dispatchInfo.gridRef,
     respondingAgencies: dispatchInfo.respondingAgencies,
     fireUnits: dispatchInfo.fireUnits,
+    fireRadioChannels: dispatchInfo.fireRadioChannels,
     // Incident details (for display on cards/map)
     incidentDescription: dispatchInfo.incidentDescription,
     responseCode: dispatchInfo.responseCode,

@@ -97,6 +97,13 @@
                   </p>
                 <% } %>
                 
+                <% if (locals.case.radio_channel) { %>
+                  <p class="mb-2 text-light">
+                    <strong class="text-white"><i class="fas fa-broadcast-tower text-warning"></i> Radio Channel:</strong><br>
+                    <span class="badge bg-warning text-dark"><%= locals.case.radio_channel %></span>
+                  </p>
+                <% } %>
+                
                 <p class="mb-2 text-light">
                   <strong class="text-white"><i class="fas fa-clock"></i> First Seen:</strong><br>
                   <span class="timestamp text-light"><%= moment.unix(locals.case.first_seen).format('DD/MM/YYYY HH:mm:ss') %></span>

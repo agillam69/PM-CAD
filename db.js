@@ -64,6 +64,7 @@ async function init() {
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN is_major INTEGER DEFAULT 0`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN message_count INTEGER DEFAULT 0`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN related_cases TEXT`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN radio_channel TEXT`); } catch (e) {}
   
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_case_number ON cases(case_number)`);
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_service ON cases(service)`);
@@ -326,6 +327,7 @@ function upsertCase(caseData) {
         response_code = COALESCE(?, response_code),
         patient_info = COALESCE(?, patient_info),
         related_cases = COALESCE(?, related_cases),
+        radio_channel = COALESCE(?, radio_channel),
         last_updated = ?
       WHERE case_number = ?
     `, [
@@ -343,14 +345,15 @@ function upsertCase(caseData) {
       caseData.responseCode || null,
       caseData.patientInfo || null,
       caseData.relatedCases || null,
+      caseData.radioChannel || null,
       caseData.timestamp,
       caseData.caseNumber
     ]);
   } else {
     // Insert
     cadDb.run(`
-      INSERT INTO cases (case_number, service, address, latitude, longitude, map_ref, status, is_priority, priority_reason, incident_type, incident_description, signal_code, response_code, patient_info, related_cases, first_seen, last_updated)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cases (case_number, service, address, latitude, longitude, map_ref, status, is_priority, priority_reason, incident_type, incident_description, signal_code, response_code, patient_info, related_cases, radio_channel, first_seen, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       caseData.caseNumber,
       caseData.service,
@@ -367,6 +370,7 @@ function upsertCase(caseData) {
       caseData.responseCode || null,
       caseData.patientInfo || null,
       caseData.relatedCases || null,
+      caseData.radioChannel || null,
       caseData.timestamp,
       caseData.timestamp
     ]);
