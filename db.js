@@ -894,6 +894,45 @@ function lookupFireUnitCode(code) {
   return unit ? unit.name : null;
 }
 
+// Auto-print capcode management
+function getAllAutoPrintCapcodes() {
+  return resultToObjects(cadDb.exec('SELECT * FROM auto_print_capcodes ORDER BY alias, capcode'));
+}
+
+function getAutoPrintCapcode(capcode) {
+  return getOne(cadDb.exec('SELECT * FROM auto_print_capcodes WHERE capcode = ?', [capcode]));
+}
+
+function addAutoPrintCapcode(capcode, alias, printDispatch = true, printLog = false) {
+  try {
+    cadDb.run('INSERT INTO auto_print_capcodes (capcode, alias, print_dispatch, print_log, enabled) VALUES (?, ?, ?, ?, 1)', 
+      [capcode, alias || null, printDispatch ? 1 : 0, printLog ? 1 : 0]);
+    saveDb();
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: 'Capcode already exists' };
+  }
+}
+
+function updateAutoPrintCapcode(id, capcode, alias, printDispatch, printLog, enabled) {
+  cadDb.run('UPDATE auto_print_capcodes SET capcode = ?, alias = ?, print_dispatch = ?, print_log = ?, enabled = ? WHERE id = ?',
+    [capcode, alias || null, printDispatch ? 1 : 0, printLog ? 1 : 0, enabled ? 1 : 0, id]);
+  saveDb();
+  return { success: true };
+}
+
+function deleteAutoPrintCapcode(id) {
+  cadDb.run('DELETE FROM auto_print_capcodes WHERE id = ?', [id]);
+  saveDb();
+  return { success: true };
+}
+
+// Check if a capcode should auto-print and return settings
+function isCapcodeAutoPrint(capcode) {
+  const setting = getOne(cadDb.exec('SELECT * FROM auto_print_capcodes WHERE capcode = ? AND enabled = 1', [capcode]));
+  return setting || null;
+}
+
 module.exports = {
   init,
   getCadDb,
@@ -936,5 +975,12 @@ module.exports = {
   addFireUnitCode,
   updateFireUnitCode,
   deleteFireUnitCode,
-  lookupFireUnitCode
+  lookupFireUnitCode,
+  // Auto-print capcodes
+  getAllAutoPrintCapcodes,
+  getAutoPrintCapcode,
+  addAutoPrintCapcode,
+  updateAutoPrintCapcode,
+  deleteAutoPrintCapcode,
+  isCapcodeAutoPrint
 };

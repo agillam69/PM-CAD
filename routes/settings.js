@@ -533,4 +533,55 @@ router.get('/api/fire-units/lookup/:code', (req, res) => {
   res.json({ code: req.params.code, name: name || req.params.code });
 });
 
+// Auto-Print Capcodes Management
+router.get('/auto-print', (req, res) => {
+  const capcodes = db.getAllAutoPrintCapcodes();
+  res.render('settings/auto-print', {
+    pageTitle: 'Auto-Print Settings',
+    capcodes
+  });
+});
+
+// API: Get all auto-print capcodes
+router.get('/api/auto-print', (req, res) => {
+  const capcodes = db.getAllAutoPrintCapcodes();
+  res.json({ success: true, capcodes });
+});
+
+// API: Add auto-print capcode
+router.post('/api/auto-print', (req, res) => {
+  const { capcode, alias, printDispatch, printLog } = req.body;
+  
+  if (!capcode) {
+    return res.status(400).json({ error: 'Capcode is required' });
+  }
+  
+  const result = db.addAutoPrintCapcode(capcode, alias, printDispatch !== false, printLog === true);
+  if (result.success) {
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ error: result.error });
+  }
+});
+
+// API: Update auto-print capcode
+router.put('/api/auto-print/:id', (req, res) => {
+  const { capcode, alias, printDispatch, printLog, enabled } = req.body;
+  const { id } = req.params;
+  
+  if (!capcode) {
+    return res.status(400).json({ error: 'Capcode is required' });
+  }
+  
+  const result = db.updateAutoPrintCapcode(parseInt(id), capcode, alias, printDispatch, printLog, enabled);
+  res.json(result);
+});
+
+// API: Delete auto-print capcode
+router.delete('/api/auto-print/:id', (req, res) => {
+  const { id } = req.params;
+  const result = db.deleteAutoPrintCapcode(parseInt(id));
+  res.json(result);
+});
+
 module.exports = router;
