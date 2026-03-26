@@ -107,7 +107,7 @@ async function executeGeocode(address, cacheKey, provider) {
 async function geocodeNominatim(address) {
   const config = nconf.get('geocoding:nominatim') || {};
   const baseUrl = config.url || 'https://nominatim.openstreetmap.org/search';
-  const defaultState = config.defaultState || '';
+  const defaultState = config.defaultState || 'Victoria';
   const defaultCountry = config.defaultCountry || 'Australia';
   
   // Build full address
@@ -119,9 +119,14 @@ async function geocodeNominatim(address) {
     fullAddress += `, ${defaultCountry}`;
   }
   
+  console.log(`Geocoding: Trying Nominatim for "${fullAddress}"`);
+  
   // Try the full address first
   let result = await tryNominatimSearch(baseUrl, fullAddress);
-  if (result) return result;
+  if (result) {
+    console.log(`Geocoding: Success for "${address}" -> ${result.lat}, ${result.lng}`);
+    return result;
+  }
   
   // For remote locations, try extracting landmark/park names
   const remoteKeywords = ['WALKING TRK', 'TRACK', 'TRAIL', 'CAMPSITE', 'NATIONAL PARK', 'STATE FOREST', 'RESERVE', 'PROMONTORY'];
@@ -182,11 +187,13 @@ async function tryNominatimSearch(baseUrl, query) {
         lat: parseFloat(result.lat),
         lng: parseFloat(result.lon),
         displayName: result.display_name,
-        confidence: parseFloat(result.importance) || 0.5
+        confidence: parseFloat(result.importance) || 0.5,
+        source: 'nominatim'
       };
     }
+    console.log(`Geocoding: No results from Nominatim for "${query}"`);
   } catch (e) {
-    // Silently fail, will try next search strategy
+    console.log(`Geocoding: Nominatim error for "${query}": ${e.message}`);
   }
   
   return null;
