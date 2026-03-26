@@ -89,7 +89,7 @@
           </div>
           <div class="row">
             <div class="col-md-6 mb-2">
-              <input type="text" class="form-control bg-dark text-white" id="note-author" placeholder="Author (optional)">
+              <input type="text" class="form-control bg-dark text-white" id="note-author" placeholder="Author" value="${typeof user !== 'undefined' && user ? (user.display_name || user.username) : ''}" readonly>
             </div>
             <div class="col-md-6 mb-2">
               <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Add Note</button>

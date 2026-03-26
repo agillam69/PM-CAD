@@ -4,6 +4,7 @@ const nconf = require('nconf');
 const moment = require('moment');
 const caseManager = require('../services/caseManager');
 const db = require('../db');
+const { ensureCanEdit, ensureAdmin } = require('../middleware/auth');
 
 // CAD Dispatch Board - Main view
 router.get('/', (req, res) => {
@@ -168,8 +169,8 @@ router.get('/api/map-cases', (req, res) => {
   res.json(cases);
 });
 
-// API: Mark/unmark case as major incident
-router.post('/api/case/:caseNumber/major', (req, res) => {
+// API: Mark/unmark case as major incident (requires operator or admin)
+router.post('/api/case/:caseNumber/major', ensureCanEdit, (req, res) => {
   const caseNumber = req.params.caseNumber;
   const isMajor = req.body.major === true || req.body.major === 'true';
   
@@ -178,8 +179,8 @@ router.post('/api/case/:caseNumber/major', (req, res) => {
   res.json({ success: true, caseNumber, isMajor });
 });
 
-// API: Close/disable a major incident
-router.post('/api/case/:caseNumber/close', (req, res) => {
+// API: Close/disable a major incident (requires operator or admin)
+router.post('/api/case/:caseNumber/close', ensureCanEdit, (req, res) => {
   const caseNumber = req.params.caseNumber;
   
   db.closeCase(caseNumber);
@@ -210,11 +211,13 @@ router.get('/major', (req, res) => {
   });
 });
 
-// API: Add note to case
-router.post('/api/case/:caseNumber/note', (req, res) => {
+// API: Add note to case (requires operator or admin)
+router.post('/api/case/:caseNumber/note', ensureCanEdit, (req, res) => {
   try {
     const { caseNumber } = req.params;
-    const { note, author } = req.body;
+    const { note } = req.body;
+    // Use logged-in user's name as author
+    const author = req.user ? (req.user.display_name || req.user.username) : null;
     
     if (!note || note.trim() === '') {
       return res.status(400).json({ error: 'Note text is required' });
@@ -225,7 +228,7 @@ router.post('/api/case/:caseNumber/note', (req, res) => {
       return res.status(404).json({ error: 'Case not found' });
     }
     
-    const result = db.addCaseNote(caseRecord.id, note.trim(), author || null);
+    const result = db.addCaseNote(caseRecord.id, note.trim(), author);
     res.json({ success: true, timestamp: result.timestamp });
   } catch (error) {
     res.status(500).json({ error: error.message });

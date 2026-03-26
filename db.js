@@ -2,6 +2,7 @@ const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 const nconf = require('nconf');
+const bcrypt = require('bcryptjs');
 
 let cadDb = null;
 let pagermonDb = null;
@@ -114,6 +115,31 @@ async function init() {
   `);
   
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_case_resources_case_id ON case_resources(case_id)`);
+  
+  // Users table for authentication
+  cadDb.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      display_name TEXT,
+      role TEXT DEFAULT 'viewer',
+      is_active INTEGER DEFAULT 1,
+      last_login INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  cadDb.run(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
+  
+  // Create default admin user if no users exist
+  const userCount = getOne(cadDb.exec('SELECT COUNT(*) as count FROM users'));
+  if (!userCount || userCount.count === 0) {
+    const defaultPassword = bcrypt.hashSync('admin', 10);
+    cadDb.run(`INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)`,
+      ['admin', defaultPassword, 'Administrator', 'admin']);
+    console.log('Created default admin user (username: admin, password: admin)');
+  }
   
   // Add alias_name column if it doesn't exist (migration for existing DBs)
   try {
@@ -674,6 +700,76 @@ function closeOldCases(timeoutSeconds = 3600) {
   saveDb();
 }
 
+// User management functions
+function getUserByUsername(username) {
+  return getOne(cadDb.exec('SELECT * FROM users WHERE username = ?', [username]));
+}
+
+function getUserById(id) {
+  return getOne(cadDb.exec('SELECT * FROM users WHERE id = ?', [id]));
+}
+
+function getAllUsers() {
+  return resultToObjects(cadDb.exec('SELECT id, username, display_name, role, is_active, last_login, created_at FROM users ORDER BY username'));
+}
+
+function createUser(username, password, displayName, role = 'viewer') {
+  const passwordHash = bcrypt.hashSync(password, 10);
+  try {
+    cadDb.run(`INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)`,
+      [username, passwordHash, displayName, role]);
+    saveDb();
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: 'Username already exists' };
+  }
+}
+
+function updateUser(id, updates) {
+  const fields = [];
+  const values = [];
+  
+  if (updates.displayName !== undefined) {
+    fields.push('display_name = ?');
+    values.push(updates.displayName);
+  }
+  if (updates.role !== undefined) {
+    fields.push('role = ?');
+    values.push(updates.role);
+  }
+  if (updates.isActive !== undefined) {
+    fields.push('is_active = ?');
+    values.push(updates.isActive ? 1 : 0);
+  }
+  if (updates.password) {
+    fields.push('password_hash = ?');
+    values.push(bcrypt.hashSync(updates.password, 10));
+  }
+  
+  if (fields.length === 0) return { success: false, error: 'No fields to update' };
+  
+  values.push(id);
+  cadDb.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDb();
+  return { success: true };
+}
+
+function deleteUser(id) {
+  cadDb.run('DELETE FROM users WHERE id = ?', [id]);
+  saveDb();
+  return { success: true };
+}
+
+function validatePassword(user, password) {
+  return bcrypt.compareSync(password, user.password_hash);
+}
+
+function updateLastLogin(userId) {
+  const now = Math.floor(Date.now() / 1000);
+  cadDb.run('UPDATE users SET last_login = ? WHERE id = ?', [now, userId]);
+  saveDb();
+}
+
 module.exports = {
   init,
   getCadDb,
@@ -700,5 +796,14 @@ module.exports = {
   closeOldCases,
   fixCaseServiceFromPrefix,
   addCaseNote,
-  getCaseNotes
+  getCaseNotes,
+  // User management
+  getUserByUsername,
+  getUserById,
+  getAllUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  validatePassword,
+  updateLastLogin
 };

@@ -247,6 +247,11 @@
           <li class="nav-item">
             <a class="nav-link" href="/settings"><i class="fas fa-cog"></i> Settings</a>
           </li>
+          <% if (typeof user !== 'undefined' && user && user.role === 'admin') { %>
+          <li class="nav-item">
+            <a class="nav-link" href="/auth/users"><i class="fas fa-users-cog"></i> Users</a>
+          </li>
+          <% } %>
         </ul>
         <ul class="navbar-nav">
           <li class="nav-item">
@@ -254,6 +259,18 @@
               <i class="fas fa-circle text-warning pulse"></i> Connecting...
             </span>
           </li>
+          <% if (typeof user !== 'undefined' && user) { %>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+              <i class="fas fa-user"></i> <%= user.display_name || user.username %>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+              <li><span class="dropdown-item-text text-muted small">Role: <%= user.role %></span></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/auth/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+          </li>
+          <% } %>
         </ul>
       </div>
     </div>

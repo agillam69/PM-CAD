@@ -4,6 +4,9 @@ const path = require('path');
 const compression = require('compression');
 const fs = require('fs');
 const { Server } = require('socket.io');
+const session = require('express-session');
+const flash = require('connect-flash');
+const SQLiteStore = require('connect-sqlite3')(session);
 
 // Config setup
 const confFile = path.join(__dirname, 'config', 'config.json');
@@ -36,6 +39,34 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Session configuration
+app.use(session({
+  store: new SQLiteStore({
+    db: 'sessions.db',
+    dir: path.join(__dirname, 'data')
+  }),
+  secret: nconf.get('sessionSecret') || 'cad-dispatch-secret-change-me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  }
+}));
+
+// Flash messages
+app.use(flash());
+
+// Passport authentication
+const { passport, ensureAuthenticated } = require('./middleware/auth');
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Make user available to all views
+app.use((req, res, next) => {
+  res.locals.user = req.user || null;
+  next();
+});
+
 // Make nconf available to routes
 app.use((req, res, next) => {
   req.nconf = nconf;
@@ -47,11 +78,18 @@ const cadRoutes = require('./routes/cad');
 const mapRoutes = require('./routes/map');
 const ingestRoutes = require('./routes/ingest');
 const settingsRoutes = require('./routes/settings');
+const authRoutes = require('./routes/auth');
 
-app.use('/cad', cadRoutes);
-app.use('/map', mapRoutes);
+// Auth routes (login/logout - not protected)
+app.use('/auth', authRoutes);
+
+// Protected routes - require authentication
+app.use('/cad', ensureAuthenticated, cadRoutes);
+app.use('/map', ensureAuthenticated, mapRoutes);
+app.use('/settings', ensureAuthenticated, settingsRoutes);
+
+// Ingest route - not protected (receives messages from PagerMon)
 app.use('/ingest', ingestRoutes);
-app.use('/settings', settingsRoutes);
 
 // Home redirect
 app.get('/', (req, res) => {
