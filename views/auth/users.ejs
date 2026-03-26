@@ -25,39 +25,25 @@
         </tr>
       </thead>
       <tbody>
-        ${users.map(user => \`
-          <tr>
-            <td>
-              <i class="fas fa-user me-2"></i>
-              \${user.username}
-              \${user.id === currentUser.id ? '<span class="badge bg-info ms-2">You</span>' : ''}
-            </td>
-            <td>\${user.display_name || '-'}</td>
-            <td>
-              <span class="badge \${user.role === 'admin' ? 'bg-danger' : user.role === 'operator' ? 'bg-warning text-dark' : 'bg-secondary'}">
-                \${user.role}
-              </span>
-            </td>
-            <td>
-              \${user.is_active ? 
-                '<span class="badge bg-success"><i class="fas fa-check"></i> Active</span>' : 
-                '<span class="badge bg-secondary"><i class="fas fa-ban"></i> Disabled</span>'}
-            </td>
-            <td>
-              \${user.last_login ? moment.unix(user.last_login).fromNow() : 'Never'}
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary" onclick="editUser(\${user.id}, '\${user.username}', '\${user.display_name || ''}', '\${user.role}', \${user.is_active})">
-                <i class="fas fa-edit"></i>
-              </button>
-              \${user.id !== currentUser.id ? \`
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(\${user.id}, '\${user.username}')">
-                  <i class="fas fa-trash"></i>
-                </button>
-              \` : ''}
-            </td>
-          </tr>
-        \`).join('')}
+` + users.map(function(user) {
+  var roleClass = user.role === 'admin' ? 'bg-danger' : user.role === 'operator' ? 'bg-warning text-dark' : 'bg-secondary';
+  var statusBadge = user.is_active ? '<span class="badge bg-success"><i class="fas fa-check"></i> Active</span>' : '<span class="badge bg-secondary"><i class="fas fa-ban"></i> Disabled</span>';
+  var lastLogin = user.last_login ? moment.unix(user.last_login).fromNow() : 'Never';
+  var youBadge = user.id === currentUser.id ? '<span class="badge bg-info ms-2">You</span>' : '';
+  var deleteBtn = user.id !== currentUser.id ? "<button class=\"btn btn-sm btn-outline-danger\" onclick=\"deleteUser(" + user.id + ", '" + user.username + "')\"><i class=\"fas fa-trash\"></i></button>" : '';
+  
+  return '<tr>' +
+    '<td><i class="fas fa-user me-2"></i>' + user.username + youBadge + '</td>' +
+    '<td>' + (user.display_name || '-') + '</td>' +
+    '<td><span class="badge ' + roleClass + '">' + user.role + '</span></td>' +
+    '<td>' + statusBadge + '</td>' +
+    '<td>' + lastLogin + '</td>' +
+    '<td>' +
+      "<button class=\"btn btn-sm btn-outline-primary\" onclick=\"editUser(" + user.id + ", '" + user.username + "', '" + (user.display_name || '') + "', '" + user.role + "', " + user.is_active + ")\"><i class=\"fas fa-edit\"></i></button> " +
+      deleteBtn +
+    '</td>' +
+  '</tr>';
+}).join('') + `
       </tbody>
     </table>
   </div>
@@ -148,7 +134,7 @@
   </div>
 </div>
 
-`, extraScripts: \`
+`, extraScripts: `
 <script>
   function addUser(event) {
     event.preventDefault();
@@ -236,4 +222,4 @@
     .catch(err => alert('Error deleting user'));
   }
 </script>
-\` }) %>
+` }) %>
