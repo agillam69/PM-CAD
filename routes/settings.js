@@ -4,6 +4,7 @@ const nconf = require('nconf');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const db = require('../db');
 
 const configPath = path.join(__dirname, '..', 'config', 'config.json');
 
@@ -473,6 +474,63 @@ router.get('/api/logs/:filename/download', (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// Fire Unit Codes Management
+router.get('/fire-units', (req, res) => {
+  const unitCodes = db.getAllFireUnitCodes();
+  res.render('settings/fire-units', {
+    pageTitle: 'Fire Unit Codes',
+    unitCodes
+  });
+});
+
+// API: Get all fire unit codes
+router.get('/api/fire-units', (req, res) => {
+  const unitCodes = db.getAllFireUnitCodes();
+  res.json({ success: true, unitCodes });
+});
+
+// API: Add fire unit code
+router.post('/api/fire-units', (req, res) => {
+  const { code, name, type } = req.body;
+  
+  if (!code || !name) {
+    return res.status(400).json({ error: 'Code and name are required' });
+  }
+  
+  const result = db.addFireUnitCode(code, name, type || 'unit');
+  if (result.success) {
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ error: result.error });
+  }
+});
+
+// API: Update fire unit code
+router.put('/api/fire-units/:id', (req, res) => {
+  const { code, name, type } = req.body;
+  const { id } = req.params;
+  
+  if (!code || !name) {
+    return res.status(400).json({ error: 'Code and name are required' });
+  }
+  
+  const result = db.updateFireUnitCode(parseInt(id), code, name, type || 'unit');
+  res.json(result);
+});
+
+// API: Delete fire unit code
+router.delete('/api/fire-units/:id', (req, res) => {
+  const { id } = req.params;
+  const result = db.deleteFireUnitCode(parseInt(id));
+  res.json(result);
+});
+
+// API: Lookup unit code
+router.get('/api/fire-units/lookup/:code', (req, res) => {
+  const name = db.lookupFireUnitCode(req.params.code);
+  res.json({ code: req.params.code, name: name || req.params.code });
 });
 
 module.exports = router;

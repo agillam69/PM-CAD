@@ -382,20 +382,37 @@ function extractDispatchInfo(message) {
     }
     
     // Extract fire units - they appear between agency indicator (F/A/S) and case number
-    // Format: ... F FGD15 PT5 PT6 F260311923
-    // Units are typically: 2-4 letters + 1-3 digits (e.g., FGD15, PT5, R44, P43, AFPR)
+    // Format: ... F FGD15 PT5 PT6 DWOO F260311923
+    // Units are typically: 2-4 letters + 1-3 digits (e.g., PT5, R44, P43)
+    // Commander codes are 4 letters (e.g., DWOO, SAHA)
+    // FGD codes are radio channels and should be excluded (FGD15, FGD551, FGD9)
     const fireUnitsMatch = message.match(/\s[FAS]\s+([A-Z0-9\s]+?)\s+F\d{9}/);
     if (fireUnitsMatch) {
       const unitsStr = fireUnitsMatch[1].trim();
       // Split by whitespace and filter valid unit codes
-      const units = unitsStr.split(/\s+/).filter(u => {
-        // Valid fire unit patterns:
-        // - 2-5 letters + 1-3 digits (FGD15, PT5, R44, P43, AFPR1)
-        // - All letters 2-5 chars (AFPR, FGD)
+      const allCodes = unitsStr.split(/\s+/).filter(u => {
+        // Valid patterns: 2-5 letters + 0-3 digits
         return /^[A-Z]{2,5}\d{0,3}$/.test(u) && u.length >= 2;
       });
+      
+      // Separate into units and radio channels
+      const units = [];
+      const radioChannels = [];
+      
+      for (const code of allCodes) {
+        // FGD codes are radio channels (Fireground Channel) - exclude from units
+        if (/^FGD\d*$/.test(code)) {
+          radioChannels.push(code);
+        } else {
+          units.push(code);
+        }
+      }
+      
       if (units.length > 0) {
         info.fireUnits = units;
+      }
+      if (radioChannels.length > 0) {
+        info.fireRadioChannels = radioChannels;
       }
     }
     

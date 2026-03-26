@@ -148,6 +148,58 @@ async function init() {
     // Column already exists
   }
   
+  // Fire unit codes lookup table (user-editable)
+  cadDb.run(`
+    CREATE TABLE IF NOT EXISTS fire_unit_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      type TEXT DEFAULT 'unit',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  cadDb.run(`CREATE INDEX IF NOT EXISTS idx_fire_unit_codes_code ON fire_unit_codes(code)`);
+  
+  // Seed some default fire unit codes if table is empty
+  const unitCount = getOne(cadDb.exec('SELECT COUNT(*) as count FROM fire_unit_codes'));
+  if (!unitCount || unitCount.count === 0) {
+    const defaultUnits = [
+      // Pumper Tankers
+      ['PT1', 'Pumper Tanker 1', 'appliance'],
+      ['PT2', 'Pumper Tanker 2', 'appliance'],
+      ['PT3', 'Pumper Tanker 3', 'appliance'],
+      ['PT4', 'Pumper Tanker 4', 'appliance'],
+      ['PT5', 'Pumper Tanker 5', 'appliance'],
+      ['PT6', 'Pumper Tanker 6', 'appliance'],
+      // Pumpers
+      ['P1', 'Pumper 1', 'appliance'],
+      ['P2', 'Pumper 2', 'appliance'],
+      ['P43', 'Pumper 43', 'appliance'],
+      // Tankers
+      ['T1', 'Tanker 1', 'appliance'],
+      ['T2', 'Tanker 2', 'appliance'],
+      // Rescue
+      ['R1', 'Rescue 1', 'appliance'],
+      ['R44', 'Rescue 44', 'appliance'],
+      // Aerial
+      ['LP1', 'Ladder Platform 1', 'appliance'],
+      ['HP1', 'Hazmat Pumper 1', 'appliance'],
+      // Support
+      ['AFPR', 'Assistant Fire Prevention', 'commander'],
+      ['FGD', 'Fireground Channel', 'radio']
+    ];
+    
+    for (const [code, name, type] of defaultUnits) {
+      try {
+        cadDb.run('INSERT INTO fire_unit_codes (code, name, type) VALUES (?, ?, ?)', [code, name, type]);
+      } catch (e) {
+        // Ignore duplicates
+      }
+    }
+    console.log('Created default fire unit codes');
+  }
+  
   // Unknown/unspecified alias messages table
   cadDb.run(`
     CREATE TABLE IF NOT EXISTS unknown_messages (
@@ -770,6 +822,45 @@ function updateLastLogin(userId) {
   saveDb();
 }
 
+// Fire unit codes management
+function getAllFireUnitCodes() {
+  return resultToObjects(cadDb.exec('SELECT * FROM fire_unit_codes ORDER BY type, code'));
+}
+
+function getFireUnitCode(code) {
+  return getOne(cadDb.exec('SELECT * FROM fire_unit_codes WHERE code = ?', [code.toUpperCase()]));
+}
+
+function addFireUnitCode(code, name, type = 'unit') {
+  try {
+    cadDb.run('INSERT INTO fire_unit_codes (code, name, type) VALUES (?, ?, ?)', 
+      [code.toUpperCase(), name, type]);
+    saveDb();
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: 'Code already exists' };
+  }
+}
+
+function updateFireUnitCode(id, code, name, type) {
+  cadDb.run('UPDATE fire_unit_codes SET code = ?, name = ?, type = ? WHERE id = ?',
+    [code.toUpperCase(), name, type, id]);
+  saveDb();
+  return { success: true };
+}
+
+function deleteFireUnitCode(id) {
+  cadDb.run('DELETE FROM fire_unit_codes WHERE id = ?', [id]);
+  saveDb();
+  return { success: true };
+}
+
+// Lookup unit code and return display name
+function lookupFireUnitCode(code) {
+  const unit = getOne(cadDb.exec('SELECT * FROM fire_unit_codes WHERE code = ?', [code.toUpperCase()]));
+  return unit ? unit.name : null;
+}
+
 module.exports = {
   init,
   getCadDb,
@@ -805,5 +896,12 @@ module.exports = {
   updateUser,
   deleteUser,
   validatePassword,
-  updateLastLogin
+  updateLastLogin,
+  // Fire unit codes
+  getAllFireUnitCodes,
+  getFireUnitCode,
+  addFireUnitCode,
+  updateFireUnitCode,
+  deleteFireUnitCode,
+  lookupFireUnitCode
 };
