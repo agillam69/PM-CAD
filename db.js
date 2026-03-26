@@ -66,6 +66,7 @@ async function init() {
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN related_cases TEXT`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN radio_channel TEXT`); } catch (e) {}
   try { cadDb.run(`ALTER TABLE cases ADD COLUMN is_afem INTEGER DEFAULT 0`); } catch (e) {}
+  try { cadDb.run(`ALTER TABLE cases ADD COLUMN is_afprs INTEGER DEFAULT 0`); } catch (e) {}
   
   // Auto-print settings table
   cadDb.run(`
@@ -343,6 +344,7 @@ function upsertCase(caseData) {
         related_cases = COALESCE(?, related_cases),
         radio_channel = COALESCE(?, radio_channel),
         is_afem = COALESCE(?, is_afem),
+        is_afprs = COALESCE(?, is_afprs),
         last_updated = ?
       WHERE case_number = ?
     `, [
@@ -362,14 +364,15 @@ function upsertCase(caseData) {
       caseData.relatedCases || null,
       caseData.radioChannel || null,
       caseData.isAFEM ? 1 : 0,
+      caseData.isAFPRS ? 1 : 0,
       caseData.timestamp,
       caseData.caseNumber
     ]);
   } else {
     // Insert
     cadDb.run(`
-      INSERT INTO cases (case_number, service, address, latitude, longitude, map_ref, status, is_priority, priority_reason, incident_type, incident_description, signal_code, response_code, patient_info, related_cases, radio_channel, is_afem, first_seen, last_updated)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cases (case_number, service, address, latitude, longitude, map_ref, status, is_priority, priority_reason, incident_type, incident_description, signal_code, response_code, patient_info, related_cases, radio_channel, is_afem, is_afprs, first_seen, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       caseData.caseNumber,
       caseData.service,
@@ -388,6 +391,7 @@ function upsertCase(caseData) {
       caseData.relatedCases || null,
       caseData.radioChannel || null,
       caseData.isAFEM ? 1 : 0,
+      caseData.isAFPRS ? 1 : 0,
       caseData.timestamp,
       caseData.timestamp
     ]);

@@ -65,6 +65,12 @@
       "icon": "truck-medical",
       "agencyMatch": ["AFEM", "EMR", "Ambulance, Fire"]
     },
+    "rescue": {
+      "name": "RESCUE",
+      "color": "#FF69B4",
+      "icon": "life-ring",
+      "agencyMatch": ["AFPRS", "Rescue", "Search & Rescue"]
+    },
     "aircraft": {
       "name": "Aircraft",
       "color": "#17a2b8",

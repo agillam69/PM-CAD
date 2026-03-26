@@ -87,6 +87,11 @@ async function processMessage(messageData) {
       caseService = 'afem';
     }
     
+    // AFPRS cases - override service to show as RESCUE
+    if (parsed.isAFPRS) {
+      caseService = 'rescue';
+    }
+    
     const caseData = {
       caseNumber: caseNum,
       service: caseService,
@@ -168,7 +173,9 @@ async function processMessage(messageData) {
       respondingAgencies: parsed.respondingAgencies,
       radioChannel: parsed.fireRadioChannels ? parsed.fireRadioChannels.join(', ') : null,
       // AFEM/EMR specific
-      isAFEM: parsed.isAFEM
+      isAFEM: parsed.isAFEM,
+      // AFPRS specific
+      isAFPRS: parsed.isAFPRS
     });
     
     // Always add capcode alias as resource (identifies the station/brigade)
