@@ -163,28 +163,20 @@ async function processMessage(messageData) {
       respondingAgencies: parsed.respondingAgencies
     });
     
-    // Add resource from alias (unit name from PagerMon capcode table)
-    // Disabled: extracted resource codes from message text to avoid duplication
-    if (alias) {
+    // For fire cases: use extracted fire units from message if available
+    // Otherwise fall back to capcode alias
+    if (parsed.isFire && parsed.fireUnits && parsed.fireUnits.length > 0) {
+      console.log(`Adding fire units for case ${effectiveCaseNumber}: ${parsed.fireUnits.join(', ')}`);
+      for (const unit of parsed.fireUnits) {
+        db.upsertResource(caseRecord.id, unit, timestamp, null);
+      }
+    } else if (alias) {
+      // For non-fire cases or when no units extracted: use capcode alias
       console.log(`Adding resource for case ${effectiveCaseNumber}: ${alias}`);
       db.upsertResource(caseRecord.id, alias, timestamp, alias);
     } else {
       console.log(`No alias for case ${effectiveCaseNumber}`);
     }
-    
-    // DISABLED: Resources extracted from message text - using alias instead
-    // if (parsed.resources && parsed.resources.length > 0) {
-    //   for (const resource of parsed.resources) {
-    //     db.upsertResource(caseRecord.id, resource, timestamp, null);
-    //   }
-    // }
-    
-    // DISABLED: Responding agencies - using alias instead
-    // if (parsed.respondingAgencies && parsed.respondingAgencies.length > 0) {
-    //   for (const agency of parsed.respondingAgencies) {
-    //     db.upsertResource(caseRecord.id, agency, timestamp, null);
-    //   }
-    // }
   }
   
   return {

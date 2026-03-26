@@ -260,6 +260,7 @@ function parseMessage(message, agency, alias = null) {
     incidentTypeCode: dispatchInfo.incidentTypeCode,
     gridRef: dispatchInfo.gridRef,
     respondingAgencies: dispatchInfo.respondingAgencies,
+    fireUnits: dispatchInfo.fireUnits,
     // Incident details (for display on cards/map)
     incidentDescription: dispatchInfo.incidentDescription,
     responseCode: dispatchInfo.responseCode,
@@ -378,6 +379,24 @@ function extractDispatchInfo(message) {
       if (message.includes(' A ')) agencies.push('Ambulance');
       if (message.includes(' S ')) agencies.push('SES');
       info.respondingAgencies = agencies.join(', ');
+    }
+    
+    // Extract fire units - they appear between agency indicator (F/A/S) and case number
+    // Format: ... F FGD15 PT5 PT6 F260311923
+    // Units are typically: 2-4 letters + 1-3 digits (e.g., FGD15, PT5, R44, P43, AFPR)
+    const fireUnitsMatch = message.match(/\s[FAS]\s+([A-Z0-9\s]+?)\s+F\d{9}/);
+    if (fireUnitsMatch) {
+      const unitsStr = fireUnitsMatch[1].trim();
+      // Split by whitespace and filter valid unit codes
+      const units = unitsStr.split(/\s+/).filter(u => {
+        // Valid fire unit patterns:
+        // - 2-5 letters + 1-3 digits (FGD15, PT5, R44, P43, AFPR1)
+        // - All letters 2-5 chars (AFPR, FGD)
+        return /^[A-Z]{2,5}\d{0,3}$/.test(u) && u.length >= 2;
+      });
+      if (units.length > 0) {
+        info.fireUnits = units;
+      }
     }
     
     return info;
