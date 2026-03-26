@@ -82,31 +82,31 @@ const caseManager = require('./services/caseManager');
 
 if (mode === 'connected') {
   // Connected mode: Direct connection to PagerMon
-  // Don't connect to live PagerMon socket for testing with historical data
-  // pagermonSocket.init(io);
+  pagermonSocket.init(io);
   
   setTimeout(async () => {
     console.log('Initial sync from PagerMon database...');
     try {
-      // TEST MODE: Sync historical data from January 7, 2026 (busiest day)
-      const testStartDate = '2026-01-07T00:00:00';
-      const testEndDate = '2026-01-07T23:59:59';
-      console.log(`Syncing historical data: ${testStartDate} to ${testEndDate}`);
-      await caseManager.syncDateRange(testStartDate, testEndDate);
+      await caseManager.syncFromPagermon();
     } catch (error) {
       console.error('Initial sync failed:', error.message);
     }
   }, 3000);
-  
-  // Disable periodic cleanup for testing
-  // setInterval(() => {
-  //   caseManager.closeOldCases();
-  // }, 5 * 60 * 1000);
 } else {
   // Standalone mode: Receives messages via /ingest endpoint
   console.log('Standalone mode - waiting for messages via /ingest/message endpoint');
   console.log('Configure PagerMon Message Repeat plugin to send to: http://YOUR_SERVER:3001/ingest/message');
 }
+
+// Periodic cleanup - runs every 5 minutes to close old cases based on timeout settings
+setInterval(() => {
+  caseManager.closeOldCases();
+}, 5 * 60 * 1000);
+
+// Run once on startup after a short delay
+setTimeout(() => {
+  caseManager.closeOldCases();
+}, 10000);
 
 // Error handling
 app.use((req, res, next) => {

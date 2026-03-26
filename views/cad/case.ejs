@@ -77,29 +77,77 @@
       </div>
     </div>
     
+    <!-- Add Note Form -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-sticky-note"></i> Add Note
+      </div>
+      <div class="card-body">
+        <form id="add-note-form" onsubmit="addNote(event)">
+          <div class="mb-3">
+            <textarea class="form-control bg-dark text-white" id="note-text" rows="2" placeholder="Enter note..." required></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-2">
+              <input type="text" class="form-control bg-dark text-white" id="note-author" placeholder="Author (optional)">
+            </div>
+            <div class="col-md-6 mb-2">
+              <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Add Note</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    
     <!-- Message Timeline -->
     <div class="card mb-4">
       <div class="card-header">
         <i class="fas fa-history"></i> Message Timeline
-        <span class="badge bg-secondary">${locals.case.messages.length}</span>
+        <span class="badge bg-secondary" id="timeline-count">${(locals.case.messages.length || 0) + (locals.case.notes ? locals.case.notes.length : 0)}</span>
       </div>
       <div class="card-body">
-        <div class="message-timeline">
-          ${locals.case.messages.map(msg => `
-            <div class="message-item">
-              <div class="d-flex justify-content-between">
-                <span class="timestamp text-light">
-                  ${moment.unix(msg.timestamp).format('HH:mm:ss')}
-                </span>
-                ${msg.source ? `<span class="badge bg-secondary">${msg.source}</span>` : ''}
-              </div>
-              <p class="mb-0 mt-1 text-white" style="font-family: monospace; word-break: break-word;">
-                ${msg.message}
-              </p>
-            </div>
-          `).join('')}
+        <div class="message-timeline" id="message-timeline">
+          ${(() => {
+            // Combine messages and notes, sort by timestamp
+            const messages = (locals.case.messages || []).map(m => ({ ...m, type: 'message' }));
+            const notes = (locals.case.notes || []).map(n => ({ ...n, type: 'note' }));
+            const combined = [...messages, ...notes].sort((a, b) => a.timestamp - b.timestamp);
+            
+            return combined.map(item => {
+              if (item.type === 'note') {
+                return \`
+                  <div class="message-item" style="border-left: 3px solid #ffc107;">
+                    <div class="d-flex justify-content-between">
+                      <span class="timestamp text-light">
+                        \${moment.unix(item.timestamp).format('HH:mm:ss')}
+                      </span>
+                      <span class="badge bg-warning text-dark"><i class="fas fa-sticky-note"></i> NOTE</span>
+                    </div>
+                    <p class="mb-0 mt-1 text-warning" style="word-break: break-word;">
+                      \${item.note}
+                    </p>
+                    \${item.author ? \`<small class="text-muted">- \${item.author}</small>\` : ''}
+                  </div>
+                \`;
+              } else {
+                return \`
+                  <div class="message-item">
+                    <div class="d-flex justify-content-between">
+                      <span class="timestamp text-light">
+                        \${moment.unix(item.timestamp).format('HH:mm:ss')}
+                      </span>
+                      \${item.source ? \`<span class="badge bg-secondary">\${item.source}</span>\` : ''}
+                    </div>
+                    <p class="mb-0 mt-1 text-white" style="font-family: monospace; word-break: break-word;">
+                      \${item.message}
+                    </p>
+                  </div>
+                \`;
+              }
+            }).join('');
+          })()}
           
-          ${locals.case.messages.length === 0 ? `
+          ${locals.case.messages.length === 0 && (!locals.case.notes || locals.case.notes.length === 0) ? `
             <p class="text-muted">No messages recorded</p>
           ` : ''}
         </div>
@@ -185,6 +233,33 @@
       }
     })
     .catch(err => console.error('Error:', err));
+  }
+  
+  // Add note to case
+  function addNote(event) {
+    event.preventDefault();
+    const note = document.getElementById('note-text').value.trim();
+    const author = document.getElementById('note-author').value.trim();
+    
+    if (!note) return;
+    
+    fetch('/cad/api/case/${locals.case.case_number}/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: note, author: author || null })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error adding note: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(err => {
+      console.error('Error:', err);
+      alert('Error adding note');
+    });
   }
 </script>
 ` }) %>

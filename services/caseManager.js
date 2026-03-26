@@ -203,6 +203,7 @@ function getCaseWithDetails(caseNumber) {
   
   const messages = db.getCaseMessages(caseRecord.id);
   const resources = db.getCaseResources(caseRecord.id);
+  const notes = db.getCaseNotes(caseRecord.id);
   const services = nconf.get('services') || {};
   const serviceConfig = services[caseRecord.service] || {};
   
@@ -210,6 +211,7 @@ function getCaseWithDetails(caseNumber) {
     ...caseRecord,
     messages,
     resources,
+    notes,
     serviceConfig
   };
 }
@@ -354,22 +356,9 @@ async function syncDateRange(startDate, endDate) {
 }
 
 function closeOldCases() {
-  const caseTimeout = nconf.get('caseTimeout') || 14400; // 4 hours
-  const cutoffTime = Math.floor(Date.now() / 1000) - caseTimeout;
-  
-  const cadDb = db.getCadDb();
-  cadDb.run(`
-    UPDATE cases SET status = 'closed' 
-    WHERE status = 'active' AND last_updated < ?
-  `, [cutoffTime]);
-  
-  const result = { changes: 0 };
-  
-  if (result.changes > 0) {
-    console.log(`Closed ${result.changes} old cases`);
-  }
-  
-  return result.changes;
+  const caseTimeout = nconf.get('caseTimeout') || 3600; // Default 1 hour from admin settings
+  db.closeOldCases(caseTimeout);
+  console.log('Ran closeOldCases with timeout:', caseTimeout, 'seconds');
 }
 
 module.exports = {

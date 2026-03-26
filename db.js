@@ -86,6 +86,20 @@ async function init() {
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_case_messages_case_id ON case_messages(case_id)`);
   
   cadDb.run(`
+    CREATE TABLE IF NOT EXISTS case_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      case_id INTEGER NOT NULL,
+      note TEXT NOT NULL,
+      author TEXT,
+      timestamp INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (case_id) REFERENCES cases(id)
+    )
+  `);
+  
+  cadDb.run(`CREATE INDEX IF NOT EXISTS idx_case_notes_case_id ON case_notes(case_id)`);
+  
+  cadDb.run(`
     CREATE TABLE IF NOT EXISTS case_resources (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       case_id INTEGER NOT NULL,
@@ -453,6 +467,25 @@ function getCaseMessages(caseId) {
   `, [caseId]));
 }
 
+// Note operations
+function addCaseNote(caseId, note, author = null) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  cadDb.run(`
+    INSERT INTO case_notes (case_id, note, author, timestamp)
+    VALUES (?, ?, ?, ?)
+  `, [caseId, note, author, timestamp]);
+  saveDb();
+  return { changes: 1, timestamp };
+}
+
+function getCaseNotes(caseId) {
+  return resultToObjects(cadDb.exec(`
+    SELECT * FROM case_notes 
+    WHERE case_id = ?
+    ORDER BY timestamp ASC
+  `, [caseId]));
+}
+
 // Resource operations
 function upsertResource(caseId, resourceCode, timestamp, aliasName = null) {
   // Skip empty or invalid resource codes
@@ -665,5 +698,7 @@ module.exports = {
   getMessages,
   getMessagesByDateRange,
   closeOldCases,
-  fixCaseServiceFromPrefix
+  fixCaseServiceFromPrefix,
+  addCaseNote,
+  getCaseNotes
 };

@@ -210,6 +210,44 @@ router.get('/major', (req, res) => {
   });
 });
 
+// API: Add note to case
+router.post('/api/case/:caseNumber/note', (req, res) => {
+  try {
+    const { caseNumber } = req.params;
+    const { note, author } = req.body;
+    
+    if (!note || note.trim() === '') {
+      return res.status(400).json({ error: 'Note text is required' });
+    }
+    
+    const caseRecord = db.getCaseByNumber(caseNumber);
+    if (!caseRecord) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    
+    const result = db.addCaseNote(caseRecord.id, note.trim(), author || null);
+    res.json({ success: true, timestamp: result.timestamp });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: Get notes for case
+router.get('/api/case/:caseNumber/notes', (req, res) => {
+  try {
+    const { caseNumber } = req.params;
+    const caseRecord = db.getCaseByNumber(caseNumber);
+    if (!caseRecord) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    
+    const notes = db.getCaseNotes(caseRecord.id);
+    res.json({ success: true, notes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: Sync from PagerMon
 router.post('/api/sync', async (req, res) => {
   try {
