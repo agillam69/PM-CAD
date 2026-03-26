@@ -82,16 +82,36 @@
       </div>
     <% } %>
 
-    <!-- Service Filter -->
+    <!-- Search and Filter -->
     <div class="row mb-3">
-      <div class="col">
-        <div class="btn-group" role="group">
-          <a href="/cad/archive" class="btn <%= !currentService ? 'btn-primary' : 'btn-secondary' %>">
+      <div class="col-md-8">
+        <form method="GET" action="/cad/archive" class="d-flex">
+          <input type="text" 
+                 name="search" 
+                 class="form-control me-2" 
+                 placeholder="Search case number, address..." 
+                 value="<%= req.query.search || '' %>">
+          <select name="service" class="form-select me-2" style="width: auto;">
+            <option value="">All Services</option>
+            <% Object.keys(services).forEach(function(service) { %>
+              <option value="<%= service %>" <%= currentService === service ? 'selected' : '' %>>
+                <%= services[service].name %>
+              </option>
+            <% }); %>
+          </select>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-search"></i> Search
+          </button>
+        </form>
+      </div>
+      <div class="col-md-4">
+        <div class="btn-group float-end" role="group">
+          <a href="/cad/archive" class="btn <%= !currentService && !req.query.search ? 'btn-primary' : 'btn-secondary' %>">
             All Services (<%= cases.all.length %>)
           </a>
           <% Object.keys(services).forEach(function(service) { %>
             <% if (cases[service] && cases[service].length > 0) { %>
-              <a href="/cad/archive?service=<%= service %>" class="btn <%= currentService === service ? 'btn-primary' : 'btn-secondary' %>">
+              <a href="/cad/archive?service=<%= service %>" class="btn <%= currentService === service && !req.query.search ? 'btn-primary' : 'btn-secondary' %>">
                 <i class="fas <%= services[service].icon %>"></i> <%= services[service].name %> (<%= cases[service].length %>)
               </a>
             <% } %>
@@ -210,7 +230,7 @@
         <ul class="pagination justify-content-center">
           <% if (currentPage > 1) { %>
             <li class="page-item">
-              <a class="page-link" href="/cad/archive?page=<%= currentPage - 1 %><%= currentService ? '&service=' + currentService : '' %>">
+              <a class="page-link" href="/cad/archive?page=<%= currentPage - 1 %><%= currentService ? '&service=' + currentService : '' %><%= req.query.search ? '&search=' + req.query.search : '' %>">
                 <i class="fas fa-chevron-left"></i> Previous
               </a>
             </li>
@@ -219,7 +239,7 @@
           <% for (let i = 1; i <= totalPages; i++) { %>
             <% if (i === currentPage || i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) { %>
               <li class="page-item <%= i === currentPage ? 'active' : '' %>">
-                <a class="page-link" href="/cad/archive?page=<%= i %><%= currentService ? '&service=' + currentService : '' %>">
+                <a class="page-link" href="/cad/archive?page=<%= i %><%= currentService ? '&service=' + currentService : '' %><%= req.query.search ? '&search=' + req.query.search : '' %>">
                   <%= i %>
                 </a>
               </li>
@@ -232,7 +252,7 @@
           
           <% if (currentPage < totalPages) { %>
             <li class="page-item">
-              <a class="page-link" href="/cad/archive?page=<%= currentPage + 1 %><%= currentService ? '&service=' + currentService : '' %>">
+              <a class="page-link" href="/cad/archive?page=<%= currentPage + 1 %><%= currentService ? '&service=' + currentService : '' %><%= req.query.search ? '&search=' + req.query.search : '' %>">
                 Next <i class="fas fa-chevron-right"></i>
               </a>
             </li>

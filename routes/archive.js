@@ -8,12 +8,30 @@ const db = require('../db');
 router.get('/', (req, res) => {
   const services = require('nconf').get('services') || {};
   const serviceFilter = req.query.service || null;
+  const searchQuery = req.query.search || null;
   const page = parseInt(req.query.page) || 1;
   const limit = 50;
   const offset = (page - 1) * limit;
   
-  // Get archived cases with pagination
-  const allArchived = db.getArchivedCases(serviceFilter);
+  // Get archived cases
+  let allArchived = db.getArchivedCases();
+  
+  // Apply search filter if provided
+  if (searchQuery) {
+    const searchLower = searchQuery.toLowerCase();
+    allArchived = allArchived.filter(c => 
+      c.case_number.toLowerCase().includes(searchLower) ||
+      (c.address && c.address.toLowerCase().includes(searchLower)) ||
+      (c.incident_type && c.incident_type.toLowerCase().includes(searchLower)) ||
+      (c.incident_description && c.incident_description.toLowerCase().includes(searchLower))
+    );
+  }
+  
+  // Apply service filter
+  if (serviceFilter) {
+    allArchived = allArchived.filter(c => c.service === serviceFilter);
+  }
+  
   const totalCases = allArchived.length;
   const totalPages = Math.ceil(totalCases / limit);
   
@@ -39,7 +57,8 @@ router.get('/', (req, res) => {
     currentPage: page,
     totalPages: totalPages,
     totalCases: totalCases,
-    moment: moment
+    moment: moment,
+    req: req // Pass req object to access query params in view
   });
 });
 
