@@ -114,6 +114,20 @@ async function geocodeNominatim(address) {
   // Preprocess address for better geocoding
   let cleanAddress = address;
   
+  // Handle venue/business names with dash: "LAURINA LODGE - HEYFIELD 14 LICOLA RD HEYFIELD"
+  const venueMatch = address.match(/^(.+?)\s*-\s*(.+?)\s+(\d+.+)$/i);
+  if (venueMatch) {
+    // Extract street number, street name, and suburb
+    // Format: Venue - Suburb StreetNumber StreetName Suburb
+    const suburb = venueMatch[2];
+    let streetAddress = venueMatch[3];
+    // Remove duplicate suburb from end of street address if present
+    if (streetAddress.toUpperCase().endsWith(' ' + suburb.toUpperCase())) {
+      streetAddress = streetAddress.slice(0, -(suburb.length + 1));
+    }
+    cleanAddress = `${streetAddress} ${suburb}`;
+  }
+  
   // Handle CNR (corner) addresses - extract first street + suburb
   const cnrMatch = address.match(/^CNR\s+(.+?)\/(.+?)\s+(\w+.*)$/i);
   if (cnrMatch) {
