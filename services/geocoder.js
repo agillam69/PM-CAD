@@ -111,8 +111,39 @@ async function geocodeNominatim(address) {
   const defaultState = config.defaultState || 'Victoria';
   const defaultCountry = config.defaultCountry || 'Australia';
   
+  // Preprocess address for better geocoding
+  let cleanAddress = address;
+  
+  // Handle CNR (corner) addresses - extract first street + suburb
+  const cnrMatch = address.match(/^CNR\s+(.+?)\/(.+?)\s+(\w+.*)$/i);
+  if (cnrMatch) {
+    cleanAddress = `${cnrMatch[1]} ${cnrMatch[3]}`;
+  }
+  
+  // Handle CORNER addresses
+  const cornerMatch = address.match(/^CORNER\s+(.+?)\/(.+?)\s+(\w+.*)$/i);
+  if (cornerMatch) {
+    cleanAddress = `${cornerMatch[1]} ${cornerMatch[3]}`;
+  }
+  
+  // If CNR parsing didn't work well, try simpler approach
+  if (address.includes('CNR ') || address.includes('CORNER ')) {
+    const parts = address.split(/\s+/);
+    // Find the suburb (last word) and the first street name
+    if (parts.length >= 3) {
+      const suburb = parts[parts.length - 1];
+      const street = parts[1]; // First word after CNR
+      cleanAddress = `${street} ${suburb}`;
+    }
+  }
+  
+  // Remove common prefixes that confuse geocoding
+  cleanAddress = cleanAddress
+    .replace(/^(OPP|OPPOSITE|NEAR|BEHIND|FRONT OF)\s+/i, '')
+    .trim();
+  
   // Build full address
-  let fullAddress = address;
+  let fullAddress = cleanAddress;
   if (defaultState && !address.toLowerCase().includes(defaultState.toLowerCase())) {
     fullAddress += `, ${defaultState}`;
   }
