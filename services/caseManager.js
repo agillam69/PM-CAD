@@ -226,7 +226,21 @@ function getCaseWithDetails(caseNumber) {
 }
 
 function getActiveCasesByService(service = null) {
+  // Auto-archive old cases before getting active ones
+  db.archiveOldCases();
+  
   const cases = db.getActiveCases(service);
+  const services = nconf.get('services') || {};
+  
+  return cases.map(c => ({
+    ...c,
+    serviceConfig: services[c.service] || {},
+    resourceCount: db.getCaseResources(c.id).length
+  }));
+}
+
+function getArchivedCasesByService(service = null, limit = 100) {
+  const cases = db.getArchivedCases(service, limit);
   const services = nconf.get('services') || {};
   
   return cases.map(c => ({
@@ -374,6 +388,7 @@ module.exports = {
   processMessage,
   getCaseWithDetails,
   getActiveCasesByService,
+  getArchivedCasesByService,
   getPriorityCases,
   getCasesForMap,
   syncFromPagermon,

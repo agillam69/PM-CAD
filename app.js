@@ -79,12 +79,14 @@ const mapRoutes = require('./routes/map');
 const ingestRoutes = require('./routes/ingest');
 const settingsRoutes = require('./routes/settings');
 const authRoutes = require('./routes/auth');
+const archiveRoutes = require('./routes/archive');
 
 // Auth routes (login/logout - not protected)
 app.use('/auth', authRoutes);
 
 // Protected routes - require authentication
 app.use('/cad', ensureAuthenticated, cadRoutes);
+app.use('/cad/archive', ensureAuthenticated, archiveRoutes);
 app.use('/map', ensureAuthenticated, mapRoutes);
 app.use('/settings', ensureAuthenticated, settingsRoutes);
 

@@ -487,6 +487,43 @@ function fixCaseServiceFromPrefix() {
   saveDb();
 }
 
+function archiveOldCases() {
+  // Archive cases older than 4 hours
+  const caseTimeout = 14400; // 4 hours in seconds
+  const cutoffTime = Math.floor(Date.now() / 1000) - caseTimeout;
+  
+  // Update old cases to archived status
+  cadDb.run(`
+    UPDATE cases 
+    SET status = 'archived' 
+    WHERE status = 'active' AND last_updated <= ?
+  `, [cutoffTime]);
+  
+  saveDb();
+  
+  const archived = cadDb.exec('SELECT changes()')[0].values[0][0];
+  console.log(`Archived ${archived} old cases`);
+  return archived;
+}
+
+function getArchivedCases(service = null, limit = 100) {
+  if (service) {
+    return resultToObjects(cadDb.exec(`
+      SELECT * FROM cases 
+      WHERE status = 'archived' AND service = ?
+      ORDER BY last_updated DESC
+      LIMIT ?
+    `, [service, limit]));
+  }
+  
+  return resultToObjects(cadDb.exec(`
+    SELECT * FROM cases 
+    WHERE status = 'archived'
+    ORDER BY last_updated DESC
+    LIMIT ?
+  `, [limit]));
+}
+
 function getActiveCases(service = null) {
   // TEST MODE: Disable time filtering for historical data testing
   const testMode = false;
@@ -948,6 +985,8 @@ module.exports = {
   upsertCase,
   getCaseByNumber,
   getActiveCases,
+  getArchivedCases,
+  archiveOldCases,
   getAllCases,
   getPriorityCases,
   addCaseMessage,

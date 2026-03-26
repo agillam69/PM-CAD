@@ -11,6 +11,9 @@
         <a href="/cad/priority" class="btn btn-warning filter-btn">
           <i class="fas fa-exclamation-triangle"></i> Priority
         </a>
+        <a href="/cad/archive" class="btn btn-outline-secondary filter-btn">
+          <i class="fas fa-archive"></i> Archive
+        </a>
         ${Object.entries(services).map(([key, config]) => 
           '<a href="/cad?service=' + key + '" ' +
              'class="btn filter-btn ' + (serviceFilter === key ? 'active' : '') + '" ' +
