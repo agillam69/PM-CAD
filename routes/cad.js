@@ -230,9 +230,11 @@ router.post('/api/case/:caseNumber/note', ensureCanEdit, (req, res) => {
     }
     
     const result = db.addCaseNote(caseRecord.id, note.trim(), author);
+    console.log(`Note added to case ${caseNumber} by ${author || 'anonymous'}`);
     res.json({ success: true, timestamp: result.timestamp });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error adding note:', error);
+    res.status(500).json({ error: error.message || 'Unknown error' });
   }
 });
 

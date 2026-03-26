@@ -303,14 +303,24 @@
       var note = document.getElementById('note-text').value.trim();
       var author = document.getElementById('note-author').value.trim();
       
-      if (!note) return;
+      if (!note) {
+        alert('Please enter a note');
+        return;
+      }
       
       fetch('/cad/api/case/<%= locals.case.case_number %>/note', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: note, author: author || null })
       })
-      .then(function(response) { return response.json(); })
+      .then(function(response) {
+        if (!response.ok) {
+          return response.json().then(function(data) {
+            throw new Error(data.error || 'Server error: ' + response.status);
+          });
+        }
+        return response.json();
+      })
       .then(function(data) {
         if (data.success) {
           location.reload();
@@ -319,8 +329,8 @@
         }
       })
       .catch(function(err) {
-        console.error('Error:', err);
-        alert('Error adding note');
+        console.error('Error adding note:', err);
+        alert('Error adding note: ' + err.message);
       });
     }
   </script>
