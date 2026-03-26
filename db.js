@@ -489,7 +489,7 @@ function fixCaseServiceFromPrefix() {
 
 function getActiveCases(service = null) {
   // TEST MODE: Disable time filtering for historical data testing
-  const testMode = true;
+  const testMode = false;
   
   if (testMode) {
     if (service) {
