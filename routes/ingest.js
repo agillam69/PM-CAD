@@ -3,6 +3,7 @@ const router = express.Router();
 const nconf = require('nconf');
 const caseManager = require('../services/caseManager');
 const logger = require('../services/logger');
+const db = require('../db');
 
 // API endpoint to receive messages from PagerMon's Message Repeat plugin
 // Configure Message Repeat in PagerMon with:
@@ -74,6 +75,21 @@ router.post('/message', async (req, res) => {
           type: 'update',
           case: caseDetails
         });
+        
+        // Check if this capcode should trigger auto-print
+        if (address) {
+          const autoPrintSetting = db.isCapcodeAutoPrint(address);
+          if (autoPrintSetting) {
+            io.emit('autoPrint', {
+              caseNumber: result.case.case_number,
+              capcode: address,
+              alias: autoPrintSetting.alias,
+              printDispatch: autoPrintSetting.print_dispatch === 1,
+              printLog: autoPrintSetting.print_log === 1
+            });
+            console.log(`Ingest: Auto-print triggered for capcode ${address}`);
+          }
+        }
       }
       
       console.log(`Ingest: Processed case ${result.case.case_number}`);

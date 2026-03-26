@@ -166,6 +166,33 @@
     }
   });
   
+  // Auto-print handler - opens print dialog when configured capcode receives message
+  socket.on('autoPrint', function(data) {
+    console.log('Auto-print triggered:', data);
+    
+    if (data.printDispatch) {
+      // Open dispatch slip in new tab for printing
+      var dispatchWin = window.open('/cad/case/' + data.caseNumber + '/print/dispatch', '_blank');
+      if (dispatchWin) {
+        dispatchWin.onload = function() {
+          dispatchWin.print();
+        };
+      }
+    }
+    
+    if (data.printLog) {
+      // Open case log in new tab for printing (slight delay if both)
+      setTimeout(function() {
+        var logWin = window.open('/cad/case/' + data.caseNumber + '/print/log', '_blank');
+        if (logWin) {
+          logWin.onload = function() {
+            logWin.print();
+          };
+        }
+      }, data.printDispatch ? 1000 : 0);
+    }
+  });
+  
   // Auto-refresh every 30 seconds (only for active cases view)
   const currentRange = '${timeRange || 'active'}';
   if (currentRange === 'active') {
