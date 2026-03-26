@@ -175,6 +175,8 @@ async function init() {
       // Pumpers
       ['P1', 'Pumper 1', 'appliance'],
       ['P2', 'Pumper 2', 'appliance'],
+      ['P12', 'Pumper 12', 'appliance'],
+      ['P13', 'Pumper 13', 'appliance'],
       ['P43', 'Pumper 43', 'appliance'],
       // Tankers
       ['T1', 'Tanker 1', 'appliance'],
@@ -185,8 +187,12 @@ async function init() {
       // Aerial
       ['LP1', 'Ladder Platform 1', 'appliance'],
       ['HP1', 'Hazmat Pumper 1', 'appliance'],
-      // Support
+      // BA Support
+      ['BS38', 'BA Support 38', 'appliance'],
+      // Commanders (add your own via Settings)
+      ['DWOO', 'Commander D Wood', 'commander'],
       ['AFPR', 'Assistant Fire Prevention', 'commander'],
+      // Radio channels (excluded from resources)
       ['FGD', 'Fireground Channel', 'radio']
     ];
     
