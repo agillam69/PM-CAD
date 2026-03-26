@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { passport, ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 const db = require('../db');
+const moment = require('moment');
 
 // Login page
 router.get('/login', (req, res) => {
@@ -39,7 +40,8 @@ router.get('/users', ensureAdmin, (req, res) => {
   res.render('auth/users', {
     pageTitle: 'User Management - CAD',
     users,
-    currentUser: req.user
+    currentUser: req.user,
+    moment
   });
 });
 
