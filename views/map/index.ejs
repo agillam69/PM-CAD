@@ -63,6 +63,9 @@
   // Service filter
   const serviceFilter = '${serviceFilter || ''}';
   
+  // Focus on specific case (from URL param)
+  const focusCase = '${focusCase || ''}';
+  
   // Custom icon function
   function createIcon(color) {
     return L.divIcon({
@@ -134,8 +137,13 @@
           bounds.push([incident.lat, incident.lng]);
         });
         
-        // Fit map to markers
-        if (bounds.length > 0) {
+        // If focusing on a specific case, center on it and open popup
+        if (focusCase && markers[focusCase]) {
+          const focusMarker = markers[focusCase];
+          map.setView(focusMarker.getLatLng(), 15);
+          focusMarker.openPopup();
+        } else if (bounds.length > 0) {
+          // Otherwise fit map to all markers
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
         }
       })

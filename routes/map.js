@@ -7,11 +7,13 @@ const caseManager = require('../services/caseManager');
 router.get('/', (req, res) => {
   const services = nconf.get('services') || {};
   const serviceFilter = req.query.service || null;
+  const focusCase = req.query.case || null;
   
   res.render('map/index', {
     pageTitle: 'Live Incident Map',
     services,
-    serviceFilter
+    serviceFilter,
+    focusCase
   });
 });
 
