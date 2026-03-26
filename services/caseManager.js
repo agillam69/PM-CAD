@@ -82,6 +82,11 @@ async function processMessage(messageData) {
     else if (caseNum.startsWith('S')) caseService = 'ses';
     else if (caseNum.startsWith('J')) caseService = 'ambulance';
     
+    // AFEM cases - override service to show as AFEM/EMR
+    if (parsed.isAFEM) {
+      caseService = 'afem';
+    }
+    
     const caseData = {
       caseNumber: caseNum,
       service: caseService,
@@ -161,7 +166,9 @@ async function processMessage(messageData) {
       incidentTypeCode: parsed.incidentTypeCode,
       gridRef: parsed.gridRef,
       respondingAgencies: parsed.respondingAgencies,
-      radioChannel: parsed.fireRadioChannels ? parsed.fireRadioChannels.join(', ') : null
+      radioChannel: parsed.fireRadioChannels ? parsed.fireRadioChannels.join(', ') : null,
+      // AFEM/EMR specific
+      isAFEM: parsed.isAFEM
     });
     
     // Always add capcode alias as resource (identifies the station/brigade)

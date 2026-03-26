@@ -59,6 +59,12 @@
       "icon": "hospital",
       "agencyMatch": ["AV NEPT", "NEPT", "Non-Emerg"]
     },
+    "afem": {
+      "name": "AFEM/EMR",
+      "color": "#8B008B",
+      "icon": "truck-medical",
+      "agencyMatch": ["AFEM", "EMR", "Ambulance, Fire"]
+    },
     "aircraft": {
       "name": "Aircraft",
       "color": "#17a2b8",

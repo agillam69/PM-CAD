@@ -262,6 +262,8 @@ function parseMessage(message, agency, alias = null) {
     respondingAgencies: dispatchInfo.respondingAgencies,
     fireUnits: dispatchInfo.fireUnits,
     fireRadioChannels: dispatchInfo.fireRadioChannels,
+    // AFEM/EMR specific
+    isAFEM: dispatchInfo.isAFEM,
     // Incident details (for display on cards/map)
     incidentDescription: dispatchInfo.incidentDescription,
     responseCode: dispatchInfo.responseCode,
@@ -314,6 +316,8 @@ function extractDispatchInfo(message) {
     incidentTypeCode: null,
     gridRef: null,
     respondingAgencies: null,
+    // AFEM/EMR specific
+    isAFEM: false,
     // SES/TAMB specific
     isSES: false,
     incidentDescription: null
@@ -477,6 +481,48 @@ function extractDispatchInfo(message) {
   // Check if this is an E-coded ambulance message
   if (/^E\d{11}/.test(message)) {
     info.isAmbulance = true;
+  }
+  
+  // AFEM/EMR cases - special joint ambulance/fire response
+  // These have both ambulance and fire characteristics
+  if (message.includes('AFEM')) {
+    info.isAmbulance = true;
+    info.isFire = true;
+    info.isAFEM = true;
+    
+    // Set responding agencies to include both
+    info.respondingAgencies = 'Ambulance, Fire';
+    
+    // Extract fire units from AFEM messages (they have fire unit codes)
+    const afemMatch = message.match(/\s[FAS]\s+([A-Z0-9\s]+?)\s+[EF]\d{9}/);
+    if (afemMatch) {
+      const unitsStr = afemMatch[1].trim();
+      // Split by whitespace and filter valid unit codes
+      const allCodes = unitsStr.split(/\s+/).filter(u => {
+        // Valid patterns: 2-5 letters + 0-3 digits
+        return /^[A-Z]{2,5}\d{0,3}$/.test(u) && u.length >= 2;
+      });
+      
+      // Separate into units and radio channels
+      const units = [];
+      const radioChannels = [];
+      
+      for (const code of allCodes) {
+        // FGD codes are radio channels (Fireground Channel) - exclude from units
+        if (/^FGD\d*$/.test(code)) {
+          radioChannels.push(code);
+        } else {
+          units.push(code);
+        }
+      }
+      
+      if (units.length > 0) {
+        info.fireUnits = units;
+      }
+      if (radioChannels.length > 0) {
+        info.fireRadioChannels = radioChannels;
+      }
+    }
   }
   
   // Signal (SIG1 = Lights & Sirens/Code 1, SIG2 = No lights/Code 2, etc.)
