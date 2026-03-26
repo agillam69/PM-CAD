@@ -368,10 +368,17 @@ function extractDispatchInfo(message) {
       info.incidentType = getFireIncidentType(incidentMatch[1]);
     }
     
-    // Map reference (e.g., 474 K11)
+    // Map reference (e.g., 474 K11 or MAP: SVSE 6886 H10)
     const mapMatch = message.match(/\b(\d{2,3}\s*[A-Z]\d{1,2})\b/);
     if (mapMatch) {
       info.destinationMapRef = mapMatch[1];
+    } else {
+      // Try MAP: SVSE 6886 H10 format
+      const mapSvMatch = message.match(/MAP:\s*(SV[A-Z]{2})\s+(\d{4})\s+([A-Z]\d+)/i);
+      if (mapSvMatch) {
+        info.mapArea = mapSvMatch[1];
+        info.destinationMapRef = `${mapSvMatch[2]} ${mapSvMatch[3]}`;
+      }
     }
     
     // Grid reference (6 digits in parentheses)
