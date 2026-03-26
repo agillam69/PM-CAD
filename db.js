@@ -189,9 +189,17 @@ async function init() {
       ['HP1', 'Hazmat Pumper 1', 'appliance'],
       // BA Support
       ['BS38', 'BA Support 38', 'appliance'],
+      // CFA Stations
+      ['CPKHM', 'CFA Pakenham', 'appliance'],
+      // SES Units
+      ['NARNR', 'Nar Nar Goon Rescue', 'appliance'],
+      ['PAKE1', 'Pakenham SES 1', 'appliance'],
+      // More Pumpers
+      ['P93', 'Pumper 93', 'appliance'],
       // Commanders (add your own via Settings)
       ['DWOO', 'Commander D Wood', 'commander'],
-      ['AFPR', 'Assistant Fire Prevention', 'commander'],
+      // Case type indicators
+      ['AFPR', 'Ambulance/Fire/Police/Rescue', 'unit'],
       // Radio channels (excluded from resources)
       ['FGD', 'Fireground Channel', 'radio']
     ];
