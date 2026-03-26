@@ -191,11 +191,13 @@ async function init() {
       ['BS38', 'BA Support 38', 'appliance'],
       // CFA Stations
       ['CPKHM', 'CFA Pakenham', 'appliance'],
+      ['CMONT', 'CFA Montrose', 'appliance'],
       // SES Units
       ['NARNR', 'Nar Nar Goon Rescue', 'appliance'],
       ['PAKE1', 'Pakenham SES 1', 'appliance'],
       // More Pumpers
       ['P93', 'Pumper 93', 'appliance'],
+      ['P26A', 'Pumper 26A', 'appliance'],
       // Commanders (add your own via Settings)
       ['DWOO', 'Commander D Wood', 'commander'],
       // Case type indicators
