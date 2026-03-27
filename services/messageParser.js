@@ -423,16 +423,20 @@ function extractDispatchInfo(message) {
   // Check if this is a generic CNR message (various prefixes)
   // EPPI3 INCIC3 WASHAWAY RESULT OF ACCIDENT CNR FINDON RD/DEVORA RD EPPING
   // BAYS1 INCIC3 STRUCTURE FIRE CNR SOMERSET RD/PRINCES HWY FRANKSTON
-  const cnrMatch = message.match(/^\w+\s+\w+\s+(.+?)\s+CNR\s+([^\/]+)\/(.+?)\s+(\w+)$/i);
-  if (cnrMatch) {
+  // VEHICLE ACCIDENT - POSS PERSON TRAPPED CNR WESTLANDS RD/HIGH ST GLEN WAVERLEY
+  const cnrGenericMatch = message.match(/CNR\s+([^\/]+)\/([A-Z]+\s+[A-Z]{2,})\s+(.+)$/i);
+  if (cnrGenericMatch) {
     info.isFire = true;
     info.respondingAgencies = 'Fire';
     
-    // Extract incident description
-    info.incidentDescription = cnrMatch[1].trim();
+    // Extract incident description (everything before CNR)
+    const descMatch = message.match(/^(.+?)\s+CNR/i);
+    if (descMatch) {
+      info.incidentDescription = descMatch[1].trim();
+    }
     
-    // Extract CNR address
-    info.address = `${cnrMatch[2]} & ${cnrMatch[3]}, ${cnrMatch[4]}`;
+    // Extract CNR address - street1, street2, suburb (may be multi-word)
+    info.address = `${cnrGenericMatch[1].trim()} & ${cnrGenericMatch[2].trim()}, ${cnrGenericMatch[3].trim()}`;
     
     return info;
   }
