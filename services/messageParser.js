@@ -335,10 +335,10 @@ function extractDispatchInfo(message) {
     info.isFire = true;
     const state = alertMatch[1]; // NS = NSW, IN = VIC, etc.
     
-    // Check for CNR format first
-    const cnrMatch = message.match(/CNR\s+([^\/]+)\/(.+?)\s+(\w+)$/i);
+    // Check for CNR format first - stop at map reference markers (M, SVVB, MAP:, etc.)
+    const cnrMatch = message.match(/CNR\s+([^\/]+)\/([A-Z]+\s+[A-Z]{2,})\s+([A-Z\s]+?)(?:\s+M\s+|\s+SV[A-Z]{2}\s+|\s+MAP:|\s+\(|\s+F\s+[A-Z]|$)/i);
     if (cnrMatch) {
-      info.address = `${cnrMatch[1].trim()} & ${cnrMatch[2].trim()}, ${cnrMatch[3]}`;
+      info.address = `${cnrMatch[1].trim()} & ${cnrMatch[2].trim()}, ${cnrMatch[3].trim()}`;
       // Extract incident description (between state code and CNR)
       const descMatch = message.match(/^ALERT\s+\d+\s+[A-Z]{2}\s+\w+\s+(.+?)\s+CNR/i);
       if (descMatch) {
@@ -587,8 +587,8 @@ function extractDispatchInfo(message) {
       info.destination = dstMatch[1].trim().replace(/\s+/g, ' ');
     }
     
-    // M: Destination map reference (Melways format: 73 D3)
-    const mapMatch = message.match(/\sM\s+(\d+\s*[A-Z]\d+)/i);
+    // M: Destination map reference (Melways format: 73 D3 or 2L B10)
+    const mapMatch = message.match(/\sM\s+(\d+[A-Z]?\s*[A-Z]\d+)/i);
     if (mapMatch) {
       info.destinationMapRef = mapMatch[1].trim();
     }
