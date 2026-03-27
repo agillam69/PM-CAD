@@ -330,7 +330,8 @@ function extractDispatchInfo(message) {
   // Check if this is an ALERT message (NSW Rural Fire Service)
   // ALERT 03508 NS 1A RV AT ALMA ROAD AND RAGLAN ST FOR NON STRUCTURE FIRE AT ALMA HOUSE - ST KILDA EAST 134 ALMA RD ST KILDA EAST /WESTBURY ST //RAVENS GR
   // ALERT 01203 IN 1A WASHAWAY OF OIL ON ROAD CNR MURRAY RD/GILBERT RD PRESTON
-  const alertMatch = message.match(/^ALERT\s+\d+\s+([A-Z]{2})\s+/i);
+  // @@ALERT 07001 INCIC3 WASHAWAY RESULT OF ACCIDENT CNR TIMOR ST/FAIRY ST WARRNAMBOOL SVSW 8494 E9 (290506) AFP P70 F260312433
+  const alertMatch = message.match(/^@@?ALERT\s+\d+\s+([A-Z0-9]+)\s+/i);
   if (alertMatch) {
     info.isFire = true;
     const state = alertMatch[1]; // NS = NSW, IN = VIC, etc.
@@ -339,8 +340,8 @@ function extractDispatchInfo(message) {
     const cnrMatch = message.match(/CNR\s+([^\/]+)\/([A-Z]+\s+[A-Z]{2,})\s+([A-Z\s]+?)(?:\s+M\s+|\s+SV[A-Z]{2}\s+|\s+MAP:|\s+\(|\s+F\s+[A-Z]|$)/i);
     if (cnrMatch) {
       info.address = `${cnrMatch[1].trim()} & ${cnrMatch[2].trim()}, ${cnrMatch[3].trim()}`;
-      // Extract incident description (between state code and CNR)
-      const descMatch = message.match(/^ALERT\s+\d+\s+[A-Z]{2}\s+\w+\s+(.+?)\s+CNR/i);
+      // Extract incident description (between incident code and CNR)
+      const descMatch = message.match(/^@@?ALERT\s+\d+\s+[A-Z0-9]+\s+(.+?)\s+CNR/i);
       if (descMatch) {
         info.incidentDescription = descMatch[1].trim();
       }
