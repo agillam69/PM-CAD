@@ -408,24 +408,19 @@ function extractDispatchInfo(message) {
     return info;
   }
   
-  // Check if this is an EPPI message (Epping specific)
+  // Check if this is a generic CNR message (various prefixes)
   // EPPI3 INCIC3 WASHAWAY RESULT OF ACCIDENT CNR FINDON RD/DEVORA RD EPPING
-  const eppiMatch = message.match(/^EPPI\d+\s+/i);
-  if (eppiMatch) {
+  // BAYS1 INCIC3 STRUCTURE FIRE CNR SOMERSET RD/PRINCES HWY FRANKSTON
+  const cnrMatch = message.match(/^\w+\s+\w+\s+(.+?)\s+CNR\s+([^\/]+)\/(.+?)\s+(\w+)$/i);
+  if (cnrMatch) {
     info.isFire = true;
     info.respondingAgencies = 'Fire';
     
     // Extract incident description
-    const descMatch = message.match(/^EPPI\d+\s+\w+\s+(.+?)\s+CNR/i);
-    if (descMatch) {
-      info.incidentDescription = descMatch[1].trim();
-    }
+    info.incidentDescription = cnrMatch[1].trim();
     
     // Extract CNR address
-    const cnrMatch = message.match(/CNR\s+([^\/]+)\/(.+?)\s+(\w+)$/i);
-    if (cnrMatch) {
-      info.address = `${cnrMatch[1]} & ${cnrMatch[2]}, ${cnrMatch[3]}`;
-    }
+    info.address = `${cnrMatch[2]} & ${cnrMatch[3]}, ${cnrMatch[4]}`;
     
     return info;
   }
