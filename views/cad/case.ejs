@@ -97,6 +97,16 @@
                   </p>
                 <% } %>
                 
+                <% if (locals.case.latitude && locals.case.longitude) { %>
+                  <p class="mb-2 text-light">
+                    <strong class="text-white"><i class="fas fa-crosshairs text-info"></i> Coordinates:</strong><br>
+                    <code class="text-info"><%= locals.case.latitude.toFixed(6) %>, <%= locals.case.longitude.toFixed(6) %></code>
+                    <a href="https://www.google.com/maps?q=<%= locals.case.latitude %>,<%= locals.case.longitude %>" target="_blank" class="btn btn-sm btn-outline-info ms-2">
+                      <i class="fas fa-external-link-alt"></i> Google Maps
+                    </a>
+                  </p>
+                <% } %>
+                
                 <% if (locals.case.radio_channel) { %>
                   <p class="mb-2 text-light">
                     <strong class="text-white"><i class="fas fa-broadcast-tower text-warning"></i> Radio Channel:</strong><br>
