@@ -441,9 +441,10 @@ function extractDispatchInfo(message) {
     return info;
   }
   
-  // Check if this is an SES/TAMB message
+  // Check if this is an SES/TAMB/ARAT message
   // HbS260351916 TAMB - TREE DOWN - TRAFFIC HAZARD - TREE BLOCKING 1/2 ROAD - 800M SOUTH...
-  const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*(.+?)\s*-\s*MAP:/i);
+  // HbS260353265 ARAT - TREE DOWN - TRAFFIC HAZARD - TREE DOWN BLOCKING ENTIRE ROAD - CNR COLLIERS GAP RD/FEUD RD EVERSLEY - MAP: SVSW 6262 E1
+  const sesMatch = message.match(/(?:TAMB|SES|VICSES|ARAT)\s*-\s*(.+?)\s*-\s*MAP:/i);
   if (sesMatch) {
     info.isSES = true;
     // Split by " - " to get all segments
@@ -461,6 +462,20 @@ function extractDispatchInfo(message) {
       info.incidentDescription = segments.slice(0, locationIdx).join(' - ').trim();
       info.incidentType = segments[0]; // First segment is usually the incident type (TREE DOWN)
     }
+    
+    // Extract CNR address if present
+    const cnrMatch = message.match(/CNR\s+([^\/]+)\/([A-Z]+\s+[A-Z]{2,})\s+([A-Z\s]+?)(?:\s+-\s+MAP:|\s+MAP:)/i);
+    if (cnrMatch) {
+      info.address = `${cnrMatch[1].trim()} & ${cnrMatch[2].trim()}, ${cnrMatch[3].trim()}`;
+    }
+    
+    // Extract map reference
+    const mapMatch = message.match(/MAP:\s*(SV[A-Z]{2})\s+(\d{4})\s+([A-Z]\d+)/i);
+    if (mapMatch) {
+      info.mapArea = mapMatch[1];
+      info.destinationMapRef = `${mapMatch[2]} ${mapMatch[3]}`;
+    }
+    
     return info;
   }
   
