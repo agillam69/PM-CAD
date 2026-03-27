@@ -114,6 +114,11 @@ async function geocodeNominatim(address) {
   // Preprocess address for better geocoding
   let cleanAddress = address;
   
+  // Strip cross streets from address: "2 / 5 ORMOND ST PASCOE VALE /ESSEX ST //SIMS ST"
+  // Remove //STREET (second cross street) first, then /STREET (first cross street)
+  cleanAddress = cleanAddress.replace(/\s*\/\/[A-Z\s]+$/i, '').trim();
+  cleanAddress = cleanAddress.replace(/\s*\/[A-Z\s]+$/i, '').trim();
+  
   // Handle venue/business names with dash: "LAURINA LODGE - HEYFIELD 14 LICOLA RD HEYFIELD"
   const venueMatch = address.match(/^(.+?)\s*-\s*(.+?)\s+(\d+.+)$/i);
   if (venueMatch) {
