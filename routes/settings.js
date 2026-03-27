@@ -584,4 +584,84 @@ router.delete('/api/auto-print/:id', (req, res) => {
   res.json(result);
 });
 
+// Known Locations Management
+router.get('/known-locations', (req, res) => {
+  const locations = db.getAllKnownLocations();
+  res.render('settings/known-locations', {
+    pageTitle: 'Known Locations',
+    locations
+  });
+});
+
+// API: Get all known locations
+router.get('/api/known-locations', (req, res) => {
+  const locations = db.getAllKnownLocations();
+  res.json(locations);
+});
+
+// API: Add known location
+router.post('/api/known-locations', (req, res) => {
+  const { code, name, address, latitude, longitude, notes } = req.body;
+  
+  if (!code || !name || !address) {
+    return res.status(400).json({ error: 'Code, name, and address are required' });
+  }
+  
+  const result = db.addKnownLocation(code, name, address, 
+    latitude ? parseFloat(latitude) : null, 
+    longitude ? parseFloat(longitude) : null, 
+    notes);
+  
+  if (result.success) {
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ error: result.error });
+  }
+});
+
+// API: Update known location
+router.put('/api/known-locations/:id', (req, res) => {
+  const { code, name, address, latitude, longitude, notes, enabled } = req.body;
+  const { id } = req.params;
+  
+  if (!code || !name || !address) {
+    return res.status(400).json({ error: 'Code, name, and address are required' });
+  }
+  
+  const result = db.updateKnownLocation(parseInt(id), code, name, address,
+    latitude ? parseFloat(latitude) : null,
+    longitude ? parseFloat(longitude) : null,
+    notes, enabled !== false);
+  
+  res.json(result);
+});
+
+// API: Delete known location
+router.delete('/api/known-locations/:id', (req, res) => {
+  const { id } = req.params;
+  const result = db.deleteKnownLocation(parseInt(id));
+  res.json(result);
+});
+
+// API: Geocode an address (for getting lat/long when adding known location)
+router.post('/api/geocode', async (req, res) => {
+  const { address } = req.body;
+  
+  if (!address) {
+    return res.status(400).json({ error: 'Address is required' });
+  }
+  
+  try {
+    const geocoder = require('../services/geocoder');
+    const result = await geocoder.geocode(address);
+    if (result) {
+      res.json({ success: true, lat: result.lat, lon: result.lon, displayName: result.displayName });
+    } else {
+      res.json({ success: false, error: 'Could not geocode address' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

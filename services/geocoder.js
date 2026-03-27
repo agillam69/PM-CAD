@@ -1,5 +1,6 @@
 const axios = require('axios');
 const nconf = require('nconf');
+const db = require('../db');
 
 // Simple in-memory cache for geocoding results
 const geocodeCache = new Map();
@@ -13,6 +14,19 @@ let isProcessingQueue = false;
 
 async function geocode(address) {
   if (!address) return null;
+  
+  // Check for known location first
+  const knownLocation = db.lookupKnownLocation(address);
+  if (knownLocation && knownLocation.latitude && knownLocation.longitude) {
+    console.log(`Using known location for "${address}": ${knownLocation.name} (${knownLocation.address})`);
+    return {
+      lat: knownLocation.latitude,
+      lon: knownLocation.longitude,
+      displayName: `${knownLocation.name} - ${knownLocation.address}`,
+      source: 'known_location',
+      knownLocation: knownLocation
+    };
+  }
   
   // Check cache first
   const cacheKey = address.toLowerCase().trim();

@@ -86,6 +86,22 @@ async function init() {
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status)`);
   cadDb.run(`CREATE INDEX IF NOT EXISTS idx_cases_last_updated ON cases(last_updated)`);
   
+  // Known locations table - for mapping known location codes to actual addresses
+  cadDb.run(`
+    CREATE TABLE IF NOT EXISTS known_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      address TEXT NOT NULL,
+      latitude REAL,
+      longitude REAL,
+      notes TEXT,
+      enabled INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  cadDb.run(`CREATE INDEX IF NOT EXISTS idx_known_locations_code ON known_locations(code)`);
+  
   cadDb.run(`
     CREATE TABLE IF NOT EXISTS case_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -978,6 +994,64 @@ function isCapcodeAutoPrint(capcode) {
   return setting || null;
 }
 
+// Known locations functions
+function getAllKnownLocations() {
+  return resultToObjects(cadDb.exec('SELECT * FROM known_locations ORDER BY code'));
+}
+
+function getKnownLocation(id) {
+  return getOne(cadDb.exec('SELECT * FROM known_locations WHERE id = ?', [id]));
+}
+
+function getKnownLocationByCode(code) {
+  // Case-insensitive match
+  return getOne(cadDb.exec('SELECT * FROM known_locations WHERE UPPER(code) = UPPER(?) AND enabled = 1', [code]));
+}
+
+function addKnownLocation(code, name, address, latitude, longitude, notes) {
+  try {
+    cadDb.run('INSERT INTO known_locations (code, name, address, latitude, longitude, notes) VALUES (?, ?, ?, ?, ?, ?)',
+      [code, name, address, latitude || null, longitude || null, notes || null]);
+    saveDb();
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: 'Location code already exists' };
+  }
+}
+
+function updateKnownLocation(id, code, name, address, latitude, longitude, notes, enabled) {
+  cadDb.run('UPDATE known_locations SET code = ?, name = ?, address = ?, latitude = ?, longitude = ?, notes = ?, enabled = ? WHERE id = ?',
+    [code, name, address, latitude || null, longitude || null, notes || null, enabled ? 1 : 0, id]);
+  saveDb();
+  return { success: true };
+}
+
+function deleteKnownLocation(id) {
+  cadDb.run('DELETE FROM known_locations WHERE id = ?', [id]);
+  saveDb();
+  return { success: true };
+}
+
+// Check if address matches a known location and return it
+function lookupKnownLocation(address) {
+  if (!address) return null;
+  
+  // Try exact match first (case-insensitive)
+  const exactMatch = getOne(cadDb.exec('SELECT * FROM known_locations WHERE UPPER(code) = UPPER(?) AND enabled = 1', [address.trim()]));
+  if (exactMatch) return exactMatch;
+  
+  // Try partial match - check if address starts with or contains a known location code
+  const allLocations = resultToObjects(cadDb.exec('SELECT * FROM known_locations WHERE enabled = 1'));
+  for (const loc of allLocations) {
+    if (address.toUpperCase().startsWith(loc.code.toUpperCase()) || 
+        address.toUpperCase().includes(loc.code.toUpperCase())) {
+      return loc;
+    }
+  }
+  
+  return null;
+}
+
 module.exports = {
   init,
   getCadDb,
@@ -1029,5 +1103,13 @@ module.exports = {
   addAutoPrintCapcode,
   updateAutoPrintCapcode,
   deleteAutoPrintCapcode,
-  isCapcodeAutoPrint
+  isCapcodeAutoPrint,
+  // Known locations
+  getAllKnownLocations,
+  getKnownLocation,
+  getKnownLocationByCode,
+  addKnownLocation,
+  updateKnownLocation,
+  deleteKnownLocation,
+  lookupKnownLocation
 };
