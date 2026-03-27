@@ -327,6 +327,109 @@ function extractDispatchInfo(message) {
     incidentDescription: null
   };
   
+  // Check if this is an ALERT message (NSW Rural Fire Service)
+  // ALERT 03508 NS 1A RV AT ALMA ROAD AND RAGLAN ST FOR NON STRUCTURE FIRE AT ALMA HOUSE - ST KILDA EAST 134 ALMA RD ST KILDA EAST /WESTBURY ST //RAVENS GR
+  const alertMatch = message.match(/^ALERT\s+\d+\s+([A-Z]{2})\s+/i);
+  if (alertMatch) {
+    info.isFire = true;
+    const state = alertMatch[1]; // NS = NSW, etc.
+    
+    // Extract location after "AT" or after the dash
+    const atMatch = message.match(/AT\s+(.+?)\s+(?:FOR|-)/i);
+    if (atMatch) {
+      info.address = atMatch[1].trim();
+    } else {
+      // Try to extract address after the dash (look for street number)
+      const dashMatch = message.match(/-\s*(\d+\s+[A-Z\s]+?)(?:\s+\/\s+|\s*\/\/|\s*$)/i);
+      if (dashMatch) {
+        info.address = dashMatch[1].trim();
+      }
+    }
+    
+    // Extract incident description
+    const descMatch = message.match(/FOR\s+(.+?)\s+(?:-|AT|$)/i);
+    if (descMatch) {
+      info.incidentDescription = descMatch[1].trim();
+    }
+    
+    // Extract cross streets
+    const crossMatch = message.match(/\/([^\/]+?)(?:\s*\/\/|\s*$)/i);
+    if (crossMatch) {
+      info.crossStreet1 = crossMatch[1].trim();
+    }
+    
+    const cross2Match = message.match(/\/\/(.+)$/i);
+    if (cross2Match) {
+      info.crossStreet2 = cross2Match[1].trim();
+    }
+    
+    // Set responding agency based on state
+    if (state === 'NS') {
+      info.respondingAgencies = 'NSW RFS';
+    } else if (state === 'VIC') {
+      info.respondingAgencies = 'CFA/FRV';
+    } else {
+      info.respondingAgencies = 'Fire Service';
+    }
+    
+    return info;
+  }
+  
+  // Check if this is an SC1 message (Specialist Command)
+  // SC1 TREE FIRE SPREADING ACROSS FROM KENSINGTON CREEK 24 CORVARA DR WINTER VALLEY /SNOWBIRD RD //STEAMBOAT AV
+  const sc1Match = message.match(/^SC1\s+/i);
+  if (sc1Match) {
+    info.isFire = true;
+    info.respondingAgencies = 'Fire';
+    
+    // Extract incident type (first words after SC1)
+    const incidentMatch = message.match(/^SC1\s+(.+?)\s+\d+\s+/i);
+    if (incidentMatch) {
+      info.incidentDescription = incidentMatch[1].trim();
+    }
+    
+    // Extract address (look for street number pattern)
+    const addrMatch = message.match(/\b(\d{1,3}\s+[A-Z]+\s+[A-Z\s]+?)\s*(?:\/|\/\/|$)/i);
+    if (addrMatch) {
+      info.address = addrMatch[1].trim();
+    }
+    
+    // Extract cross streets
+    const crossMatch = message.match(/\/([^\/]+?)(?:\s*\/\/|\s*$)/i);
+    if (crossMatch) {
+      info.crossStreet1 = crossMatch[1].trim();
+    }
+    
+    const cross2Match = message.match(/\/\/(.+)$/i);
+    if (cross2Match) {
+      info.crossStreet2 = cross2Match[1].trim();
+    }
+    
+    return info;
+  }
+  
+  // Check if this is an EPPI message (Epping specific)
+  // EPPI3 INCIC3 WASHAWAY RESULT OF ACCIDENT CNR FINDON RD/DEVORA RD EPPING
+  const eppiMatch = message.match(/^EPPI\d+\s+/i);
+  if (eppiMatch) {
+    info.isFire = true;
+    info.respondingAgencies = 'Fire';
+    
+    // Extract incident description
+    const descMatch = message.match(/^EPPI\d+\s+\w+\s+(.+?)\s+CNR/i);
+    if (descMatch) {
+      info.incidentDescription = descMatch[1].trim();
+    }
+    
+    // Extract CNR address
+    const cnrMatch = message.match(/CNR\s+([^\/]+)\/(.+?)\s+(\w+)$/i);
+    if (cnrMatch) {
+      info.address = `${cnrMatch[1]} & ${cnrMatch[2]}, ${cnrMatch[3]}`;
+    }
+    
+    return info;
+  }
+  
   // Check if this is an SES/TAMB message
   // HbS260351916 TAMB - TREE DOWN - TRAFFIC HAZARD - TREE BLOCKING 1/2 ROAD - 800M SOUTH...
   const sesMatch = message.match(/(?:TAMB|SES|VICSES)\s*-\s*(.+?)\s*-\s*MAP:/i);
