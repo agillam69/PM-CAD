@@ -58,7 +58,8 @@ router.get('/', (req, res) => {
     totalPages: totalPages,
     totalCases: totalCases,
     moment: moment,
-    req: req // Pass req object to access query params in view
+    req: req, // Pass req object to access query params in view
+    messages: req.flash ? { success: req.flash('success')[0], error: req.flash('error')[0] } : {}
   });
 });
 
