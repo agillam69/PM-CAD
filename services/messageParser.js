@@ -329,44 +329,56 @@ function extractDispatchInfo(message) {
   
   // Check if this is an ALERT message (NSW Rural Fire Service)
   // ALERT 03508 NS 1A RV AT ALMA ROAD AND RAGLAN ST FOR NON STRUCTURE FIRE AT ALMA HOUSE - ST KILDA EAST 134 ALMA RD ST KILDA EAST /WESTBURY ST //RAVENS GR
+  // ALERT 01203 IN 1A WASHAWAY OF OIL ON ROAD CNR MURRAY RD/GILBERT RD PRESTON
   const alertMatch = message.match(/^ALERT\s+\d+\s+([A-Z]{2})\s+/i);
   if (alertMatch) {
     info.isFire = true;
-    const state = alertMatch[1]; // NS = NSW, etc.
+    const state = alertMatch[1]; // NS = NSW, IN = VIC, etc.
     
-    // Extract location after "AT" or after the dash
-    const atMatch = message.match(/AT\s+(.+?)\s+(?:FOR|-)/i);
-    if (atMatch) {
-      info.address = atMatch[1].trim();
-    } else {
-      // Try to extract address after the dash (look for street number)
-      const dashMatch = message.match(/-\s*(\d+\s+[A-Z\s]+?)(?:\s+\/\s+|\s*\/\/|\s*$)/i);
-      if (dashMatch) {
-        info.address = dashMatch[1].trim();
+    // Check for CNR format first
+    const cnrMatch = message.match(/CNR\s+([^\/]+)\/(.+?)\s+(\w+)$/i);
+    if (cnrMatch) {
+      info.address = `${cnrMatch[1].trim()} & ${cnrMatch[2].trim()}, ${cnrMatch[3]}`;
+      // Extract incident description (between state code and CNR)
+      const descMatch = message.match(/^ALERT\s+\d+\s+[A-Z]{2}\s+\w+\s+(.+?)\s+CNR/i);
+      if (descMatch) {
+        info.incidentDescription = descMatch[1].trim();
       }
-    }
-    
-    // Extract incident description
-    const descMatch = message.match(/FOR\s+(.+?)\s+(?:-|AT|$)/i);
-    if (descMatch) {
-      info.incidentDescription = descMatch[1].trim();
-    }
-    
-    // Extract cross streets
-    const crossMatch = message.match(/\/([^\/]+?)(?:\s*\/\/|\s*$)/i);
-    if (crossMatch) {
-      info.crossStreet1 = crossMatch[1].trim();
-    }
-    
-    const cross2Match = message.match(/\/\/(.+)$/i);
-    if (cross2Match) {
-      info.crossStreet2 = cross2Match[1].trim();
+    } else {
+      // Extract location after "AT" or after the dash
+      const atMatch = message.match(/AT\s+(.+?)\s+(?:FOR|-)/i);
+      if (atMatch) {
+        info.address = atMatch[1].trim();
+      } else {
+        // Try to extract address after the dash (look for street number)
+        const dashMatch = message.match(/-\s*(\d+\s+[A-Z\s]+?)(?:\s+\/\s+|\s*\/\/|\s*$)/i);
+        if (dashMatch) {
+          info.address = dashMatch[1].trim();
+        }
+      }
+      
+      // Extract incident description
+      const descMatch = message.match(/FOR\s+(.+?)\s+(?:-|AT|$)/i);
+      if (descMatch) {
+        info.incidentDescription = descMatch[1].trim();
+      }
+      
+      // Extract cross streets
+      const crossMatch = message.match(/\/([^\/]+?)(?:\s*\/\/|\s*$)/i);
+      if (crossMatch) {
+        info.crossStreet1 = crossMatch[1].trim();
+      }
+      
+      const cross2Match = message.match(/\/\/(.+)$/i);
+      if (cross2Match) {
+        info.crossStreet2 = cross2Match[1].trim();
+      }
     }
     
     // Set responding agency based on state
     if (state === 'NS') {
       info.respondingAgencies = 'NSW RFS';
-    } else if (state === 'VIC') {
+    } else if (state === 'IN' || state === 'VIC') {
       info.respondingAgencies = 'CFA/FRV';
     } else {
       info.respondingAgencies = 'Fire Service';
