@@ -207,6 +207,8 @@ function parseMessage(message, agency, alias = null) {
     finalMapRef = dispatchInfo.destinationMapRef;
   } else if (dispatchInfo.isFire && dispatchInfo.destinationMapRef) {
     finalMapRef = dispatchInfo.destinationMapRef;
+  } else if (dispatchInfo.isSES && dispatchInfo.destinationMapRef) {
+    finalMapRef = dispatchInfo.destinationMapRef;
   }
   
   // Extract all case numbers for dual/multi-agency responses
@@ -438,6 +440,63 @@ function extractDispatchInfo(message) {
     
     // Extract CNR address - street1, street2, suburb (may be multi-word)
     info.address = `${cnrGenericMatch[1].trim()} & ${cnrGenericMatch[2].trim()}, ${cnrGenericMatch[3].trim()}`;
+    
+    return info;
+  }
+  
+  // Check if this is a new SES ALERT format with S-prefixed case number
+  // ALERT S260450190 BRGT - PRI 1: ASSIST AMBULANCE - ASSIST AV - ACCESS PT AT MOUNTAIN BIKE PARK - MYSTIC MOUNTAIN BIKE PARK - BRIGHT 123 CORONATION AV BRIGHT /MYSTIC LANE //MORSES CREEK RD - MAP: SVNE 8322 J11 (978337) S [BRGT]
+  const sesAlertMatch = message.match(/^ALERT\s+S\d+\s+\w+\s+-\s+PRI\s+(\d+):\s+(.+?)\s+-\s+MAP:/i);
+  if (sesAlertMatch) {
+    info.isSES = true;
+    const priority = parseInt(sesAlertMatch[1]);
+    const content = sesAlertMatch[2];
+    
+    const segments = content.split(/\s+-\s+/);
+    
+    // Find where address starts (segment containing street number + street type)
+    let addrIdx = -1;
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (/\b\d+\s+[A-Z][A-Z\s'-]+\b(?:AV|AVE|RD|ST|DR|CT|HWY|LANE|LN|TCE|CRES|PL|CL|BLVD)\b/i.test(segments[i])) {
+        addrIdx = i;
+        break;
+      }
+    }
+    
+    if (addrIdx >= 0) {
+      info.incidentDescription = segments.slice(0, addrIdx).join(' - ').trim();
+      info.incidentType = segments[0];
+    } else {
+      info.incidentDescription = content;
+      info.incidentType = segments[0];
+    }
+    
+    // Cross streets
+    const sesAlertCrossMatch = message.match(/\/([^\/]+?)(?:\s*\/\/|\s+-\s+MAP:)/i);
+    if (sesAlertCrossMatch) {
+      info.crossStreet1 = sesAlertCrossMatch[1].trim();
+    }
+    const sesAlertCross2Match = message.match(/\/\/([^\/]+?)(?:\s+-\s+MAP:|$)/i);
+    if (sesAlertCross2Match) {
+      info.crossStreet2 = sesAlertCross2Match[1].trim();
+    }
+    
+    // Map reference: MAP: SVNE 8322 J11
+    const sesAlertMapMatch = message.match(/MAP:\s*(SV[A-Z]{2})\s+(\d{4})\s+([A-Z]\d+)/i);
+    if (sesAlertMapMatch) {
+      info.mapArea = sesAlertMapMatch[1];
+      info.destinationMapRef = `${sesAlertMapMatch[2]} ${sesAlertMapMatch[3]}`;
+    }
+    
+    // Grid reference
+    const sesAlertGridMatch = message.match(/\((\d{6})\)/);
+    if (sesAlertGridMatch) {
+      info.gridRef = sesAlertGridMatch[1];
+    }
+    
+    if (priority === 1) {
+      info.signal = 1;
+    }
     
     return info;
   }
@@ -1120,6 +1179,15 @@ function extractAllCaseNumbers(message) {
 }
 
 function extractAddress(message, patterns) {
+  // New SES ALERT format: ALERT S[case] [STATION] - PRI N: ... [SUBURB] [NUM] [STREET] [SUBURB] /[CROSS1] //[CROSS2] - MAP: ...
+  // ALERT S260450190 BRGT - PRI 1: ASSIST AMBULANCE - ASSIST AV - ... - BRIGHT 123 CORONATION AV BRIGHT /MYSTIC LANE //MORSES CREEK RD - MAP:
+  const sesAlertAddrMatch = message.match(
+    /^ALERT\s+S\d+\s+\w+\s+-\s+PRI\s+\d+:\s+.+?-\s+(?:[A-Z]+\s+)?(\d+\s+[A-Z][A-Z\s'-]+?(?:AV|AVE|RD|ST|DR|CT|HWY|LANE|LN|TCE|CRES|PL|CL|BLVD)\s+[A-Z]+)\s+\/[A-Z]/i
+  );
+  if (sesAlertAddrMatch) {
+    return sesAlertAddrMatch[1].trim();
+  }
+  
   // Try SES format with " - MAP:" marker
   // HbS260351966 GEEL - TREE DOWN - TRAFFIC HAZARD - TREE IN ONE LANE - NORTHBOUND - CNR PRINCES HWY/CHURCH ST GEELONG WEST - MAP: M441 K11
   // HbS260351969 ALEX - TREE DOWN - TRAFFIC HAZARD - CNR YARCK RD/PENNYS RD TERIP TERIP - MAP: SVNE 365 B2
@@ -1288,6 +1356,12 @@ function extractMapRef(message, patterns) {
   const svvbMatch = message.match(/SVVB\s+([NSEW]{1,2}\s+\d+\s+[A-Z]\d*)/i);
   if (svvbMatch) {
     return svvbMatch[1].trim();
+  }
+  
+  // SV-prefix map format: MAP: SVNE 8322 J11, MAP: SVSW 6262 E1, MAP: SVSE 6886 H10
+  const svMapMatch = message.match(/MAP:\s*SV[A-Z]{2}\s+(\d{4}\s+[A-Z]\d+)/i);
+  if (svMapMatch) {
+    return svMapMatch[1].trim();
   }
   
   if (!patterns || !Array.isArray(patterns)) {
